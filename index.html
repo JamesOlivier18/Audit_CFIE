@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#006878">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Suivi chantier">
+<title>Suivi chantier faible impact environnemental</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Lato',sans-serif;background:#f0f4f5;color:#1a1a1a;font-size:15px;-webkit-tap-highlight-color:transparent}
+:root{--teal:#006878;--teal-dark:#004e5c;--teal-light:#e0f0f3;--teal-mid:#b2d8e0;--grey:#f5f7f8;--border:#dde3e5;--text:#1a2a2e;--muted:#6b8a90}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+.header{background:var(--teal);padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.header h1{font-size:16px;font-weight:700;flex:1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back-btn{background:none;border:none;font-size:22px;cursor:pointer;color:#fff;padding:0 6px}
+.content{flex:1;padding:14px;display:flex;flex-direction:column;gap:10px}
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:16px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:'Lato',sans-serif;color:var(--text);background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);border-color:var(--teal)}
+textarea{resize:vertical;min-height:64px}
+.btn{display:block;width:100%;padding:13px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:none;text-align:center;font-family:'Lato',sans-serif}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:active{background:var(--teal-dark)}
+.btn-secondary{background:#fff;border:1px solid var(--border);color:var(--text)}
+.cat-card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:8px}
+.cat-card:active{background:var(--teal-light)}
+.cat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;color:#fff;letter-spacing:0}
+.cat-info{flex:1;min-width:0}
+.cat-title{font-weight:700;font-size:14px;color:var(--text)}
+.badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.badge-ok{background:#e6f4ea;color:#1e6e35}
+.badge-warn{background:#fff4e0;color:#b85c00}
+.badge-ko{background:#fdecea;color:#b71c1c}
+.badge-na{background:#f5f5f5;color:#888}
+.badge-pending{background:var(--teal-light);color:var(--teal-dark)}
+.progress-bar{height:5px;background:var(--teal-mid);border-radius:3px;overflow:hidden;margin-top:7px}
+.progress-fill{height:100%;background:var(--teal);border-radius:3px;transition:width .3s}
+.item-block{background:#fff;border-radius:12px;border:1px solid var(--border);padding:14px;margin-bottom:10px}
+.item-title{font-weight:700;font-size:14px;color:var(--text);margin-bottom:10px;line-height:1.4}
+.sub-item{font-size:13px;color:var(--muted);margin-bottom:8px}
+.status-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.status-btn{padding:6px 10px;border-radius:20px;border:1px solid var(--border);font-size:11px;cursor:pointer;background:#fff;color:#555;font-weight:700;font-family:'Lato',sans-serif;white-space:nowrap}
+.status-btn.s-NC{border-color:#ef5350;color:#b71c1c;background:#fdecea}
+.status-btn.s-AM{border-color:#ff9800;color:#b85c00;background:#fff4e0}
+.status-btn.s-C{border-color:#4caf50;color:#1e6e35;background:#e6f4ea}
+.status-btn.s-NV{border-color:#90a4ae;color:#546e7a;background:#f5f7f8}
+.status-btn.s-NN{border-color:#b0bec5;color:#78909c;background:#f5f7f8}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.photo-thumb{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2a2e;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;font-family:'Lato',sans-serif;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1}
+.travaux-chip{display:inline-block;background:var(--teal-light);border:1px solid var(--teal-mid);border-radius:20px;padding:6px 14px;font-size:13px;margin:4px;cursor:pointer;color:var(--teal-dark);font-weight:700}
+.travaux-chip.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+input[type=file]{display:none}
+.setup-hero{background:var(--teal);padding:40px 20px 28px;text-align:center}
+.setup-hero h1{color:#fff;font-size:22px;font-weight:700;margin-bottom:6px}
+.setup-hero p{color:rgba(255,255,255,.8);font-size:14px}
+.optional-tag{font-size:10px;background:#f0f4f5;color:var(--muted);border-radius:4px;padding:1px 5px;margin-left:6px;font-weight:400;text-transform:none;letter-spacing:0}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- SCREEN: Compat -->
+<div class="screen" id="s-compat">
+  <div class="content" style="justify-content:center;align-items:center;min-height:100vh">
+    <div class="card" style="text-align:center;padding:32px 20px">
+      <div style="font-size:32px;font-weight:700;color:var(--teal);margin-bottom:16px">!</div>
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:10px">Navigateur non compatible</h2>
+      <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px">Cette application nécessite <strong>Chrome</strong> ou <strong>Edge</strong> pour fonctionner sur Android.</p>
+      <div style="background:var(--grey);border-radius:10px;padding:14px;text-align:left;margin-bottom:20px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px">Comment faire :</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.9">
+          1. Installez <strong>Chrome</strong> ou <strong>Edge</strong> depuis le Play Store<br>
+          2. Ouvrez le fichier <code style="background:#dde3e5;padding:1px 5px;border-radius:4px">audit.html</code> avec ce navigateur<br>
+          3. Relancez l'application
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="https://play.google.com/store/apps/details?id=com.android.chrome" style="display:block;padding:12px;background:var(--teal);color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Télécharger Chrome</a>
+        <a href="https://play.google.com/store/apps/details?id=com.microsoft.emmx" style="display:block;padding:12px;background:#fff;border:1px solid var(--border);color:var(--text);border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Télécharger Edge</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: Setup -->
+<div class="screen" id="s-setup">
+  <div class="setup-hero">
+    <div style="font-size:13px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:14px">Suivi environnemental</div>
+    <h1>Visite de chantier</h1>
+    <p>Chantier Faible Impact Environnemental</p>
+  </div>
+  <div class="content" style="padding-top:20px">
+    <div class="card">
+      <div id="setup-prev" style="display:none;font-size:13px;color:var(--muted);margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)"></div>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.6">Choisissez le dossier de travail pour stocker les audits et photos.<br><strong style="color:var(--text)">Exemple :</strong> Documents / Audits_Environnement</p>
+      <button class="btn btn-primary" onclick="setupFolder()">Choisir un dossier de travail</button>
+    </div>
+    <div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:18px">
+      Données stockées uniquement sur votre téléphone.<br>Aucune connexion internet requise.
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: Paramètres -->
+<div class="screen" id="s-settings">
+  <div class="header">
+    <button class="back-btn" onclick="navigate('s-home')">←</button>
+    <h1>Paramètres</h1>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Dossier de travail</div>
+      <div id="settings-folder-name" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">Le dossier doit être re-sélectionné à chaque session (limite du navigateur). Le nom est mémorisé.</div>
+      <button class="btn btn-primary" onclick="setupFolderFromSettings()">Changer de dossier</button>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Entreprises intervenantes</div>
+      <div id="settings-entreprises"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <input type="color" id="settings-entreprise-color" value="#006878" style="width:38px;height:38px;padding:2px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff;flex-shrink:0">
+        <input type="text" id="settings-entreprise-input" placeholder="Nom de l'entreprise" style="flex:1" onkeydown="if(event.key==='Enter') addEntreprise()">
+        <button onclick="addEntreprise()" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;white-space:nowrap">Ajouter</button>
+      </div>
+    </div>
+    <div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:18px">
+      Version 2.0 — Suivi chantier faible impact environnemental
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: Home -->
+<div class="screen" id="s-home">
+  <div class="header">
+    <h1>Mes audits</h1>
+    <button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="navigate('s-new-audit')">+ Nouveau</button>
+    <button onclick="navigate('s-settings')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;line-height:1" title="Paramètres">⚙</button>
+  </div>
+  <div class="content">
+    <div id="install-banner" class="card" style="display:none;background:#fff4e0;border-color:#ffd699;padding:14px;position:relative">
+      <button onclick="dismissInstall()" style="position:absolute;top:8px;right:8px;background:none;border:none;font-size:18px;color:#b85c00;cursor:pointer;padding:4px 8px">×</button>
+      <div style="display:flex;align-items:start;gap:10px">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:#b85c00;margin-bottom:4px">Installer l'application</div>
+          <div style="font-size:12px;color:#7a4a00;line-height:1.5">Pour une meilleure expérience (plein écran, bouton retour fonctionnel), installez l'app : <strong>Menu Chrome (⋮) → "Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Dossier de travail</div>
+        <div id="folder-name" style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)"></div>
+      </div>
+      <button onclick="setupFolder()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--muted);font-family:'Lato',sans-serif;white-space:nowrap">Changer</button>
+    </div>
+    <div id="audit-list-empty" class="card" style="text-align:center;color:var(--muted);padding:36px 16px;display:none">
+      <p style="font-weight:700;margin-bottom:4px;color:var(--text)">Aucun audit enregistré</p>
+      <p style="font-size:13px">Créez votre premier audit de chantier</p>
+    </div>
+    <div id="audit-list"></div>
+  </div>
+</div>
+
+<!-- SCREEN: New Audit -->
+<div class="screen" id="s-new-audit">
+  <div class="header">
+    <button class="back-btn" onclick="navigate('s-home')">←</button>
+    <h1>Nouvel audit</h1>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div style="margin-bottom:14px"><label>Nom du chantier *</label><input type="text" id="f-chantier" placeholder="Ex : Résidence Les Acacias" maxlength="100"></div>
+      <div style="margin-bottom:14px"><label>Maîtrise d'ouvrage</label><input type="text" id="f-moa" placeholder="Ex : SOGARIS HAROPA PORT" maxlength="100"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><label>Code opération</label><input type="text" id="f-code" placeholder="Ex : AMA" maxlength="12"></div>
+        <div><label>N° de visite</label><input type="text" id="f-numero" placeholder="Ex : 01" maxlength="12"></div>
+      </div>
+      <div style="margin-bottom:14px"><label>Adresse</label><input type="text" id="f-adresse" placeholder="Rue, ville..." maxlength="200"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><label>Date *</label><input type="date" id="f-date"></div>
+        <div><label>Auditeur *</label><input type="text" id="f-auditeur" placeholder="Votre nom" maxlength="80"></div>
+      </div>
+      <div style="margin-bottom:14px"><label>Météo</label>
+        <select id="f-meteo">
+          <option value="">-- Sélectionner --</option>
+          <option>Beau temps</option><option>Nuageux</option><option>Pluie</option><option>Vent fort</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <label>Température <span class="optional-tag">optionnel</span></label>
+          <input type="number" id="f-temp" placeholder="Ex : 28" min="-20" max="50">
+        </div>
+        <div>
+          <label>Humidité <span class="optional-tag">optionnel</span></label>
+          <input type="number" id="f-hygro" placeholder="Ex : 35" min="0" max="100">
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">Une température élevée et une faible humidité favorisent les émissions de poussières.</div>
+      <div><label>Travaux en cours</label>
+        <div id="travaux-chips" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="createAudit()">Démarrer l'audit</button>
+  </div>
+</div>
+
+<!-- SCREEN: Categories -->
+<div class="screen" id="s-cats">
+  <div class="header">
+    <button class="back-btn" onclick="navigate('s-home')">←</button>
+    <h1 id="cat-screen-title">Audit</h1>
+  </div>
+  <div class="content">
+    <div id="travaux-display" class="card" style="padding:12px 16px;display:none">
+      <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Travaux en cours</div>
+      <div id="travaux-display-chips"></div>
+    </div>
+    <div id="cat-list"></div>
+    <button class="btn btn-primary" onclick="navigate('s-summary')">Voir le récapitulatif</button>
+  </div>
+</div>
+
+<!-- SCREEN: Items -->
+<div class="screen" id="s-items">
+  <div class="header">
+    <button class="back-btn" onclick="navigate('s-cats')">←</button>
+    <h1 id="items-title">Catégorie</h1>
+  </div>
+  <div class="content" id="items-list"></div>
+  <div style="padding:16px;padding-top:0">
+    <button class="btn btn-secondary" onclick="navigate('s-cats')">Retour aux catégories</button>
+  </div>
+</div>
+
+<!-- SCREEN: Summary -->
+<div class="screen" id="s-summary">
+  <div class="header">
+    <button class="back-btn" onclick="navigate('s-cats')">←</button>
+    <h1>Récapitulatif</h1>
+  </div>
+  <div class="content" id="summary-content"></div>
+  <div style="padding:16px;padding-top:0;display:flex;flex-direction:column;gap:8px">
+    <button class="btn btn-primary" onclick="exportReport()">Exporter en HTML (avec photos)</button>
+    <button class="btn btn-secondary" onclick="exportWord()">Exporter en Word (.docx)</button>
+  </div>
+</div>
+
+<!-- Photo viewer -->
+<div id="photo-viewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:200;flex-direction:column;align-items:center;justify-content:center">
+  <button onclick="closeViewer()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer">✕</button>
+  <img id="viewer-img" style="max-width:95vw;max-height:80vh;object-fit:contain;border-radius:8px" alt="">
+  <button id="viewer-del" style="margin-top:16px;background:#c62828;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-family:'Lato',sans-serif;font-weight:700">Supprimer cette photo</button>
+</div>
+
+<!-- Photo menu -->
+<div id="photo-menu" style="display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.4)" onclick="closePhotoMenu()">
+  <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:16px 16px 0 0;padding:16px;display:flex;flex-direction:column;gap:10px" onclick="event.stopPropagation()">
+    <div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:4px;font-weight:700">Ajouter une photo</div>
+    <button class="btn btn-primary" onclick="closePhotoMenu();document.getElementById('fi-cam').click()">Prendre une photo</button>
+    <button class="btn btn-secondary" onclick="closePhotoMenu();document.getElementById('fi-gal').click()">Choisir depuis la galerie</button>
+    <button class="btn btn-secondary" style="color:var(--muted)" onclick="closePhotoMenu()">Annuler</button>
+  </div>
+</div>
+
+<input type="file" id="fi-cam" accept="image/*" capture="environment" onchange="handlePhotos(event)">
+<input type="file" id="fi-gal" accept="image/*" multiple onchange="handlePhotos(event)">
+
+<script src="checklist.js" onerror="document.body.innerHTML='<p style=&quot;padding:24px;font-family:sans-serif&quot;>Fichier <b>checklist.js</b> introuvable : il doit être dans le même dossier que index.html.</p>'"></script>
+<script>
+'use strict';
+
+// ── Constantes ───────────────────────────────────────────
+const STATUSES = [
+  {v:'NN', l:'Non concerné'},
+  {v:'NV', l:'Non vérifié'},
+  {v:'NC', l:'Non conforme'},
+  {v:'AM', l:'À améliorer'},
+  {v:'C',  l:'Conforme'}
+];
+
+// CATS et CONFIG sont définis dans checklist.js
+
+// ── État global ───────────────────────────────────────────
+let dirHandle = null, audits = [], currentAudit = null, currentCatId = null, currentPhotoKey = null;
+let selectedTravaux = [];
+let currentScreen = 's-setup';
+
+// ── Utilitaires ───────────────────────────────────────────
+// Échappe les caractères HTML pour éviter les injections XSS dans les templates
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+// Valide qu'une couleur est un hex valide (évite l'injection CSS)
+function safeColor(c, fallback='#006878') {
+  return /^#[0-9a-fA-F]{6}$/.test(c) ? c : fallback;
+}
+
+// ── Entreprises ──────────────────────────────────────────
+function loadEntreprises() {
+  try { return JSON.parse(localStorage.getItem('entreprises') || '[]'); } catch { return []; }
+}
+function saveEntreprises(list) { localStorage.setItem('entreprises', JSON.stringify(list)); }
+
+function renderEntreprisesSettings() {
+  const list = loadEntreprises();
+  const container = document.getElementById('settings-entreprises');
+  if (!list.length) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">Aucune entreprise enregistrée</div>';
+    return;
+  }
+  // Construction DOM sans innerHTML pour éviter XSS
+  container.innerHTML = '';
+  list.forEach((e, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)';
+    const swatch = document.createElement('div');
+    swatch.style.cssText = `width:22px;height:22px;border-radius:4px;background:${safeColor(e.color)};flex-shrink:0;border:1px solid rgba(0,0,0,.1)`;
+    const name = document.createElement('span');
+    name.style.cssText = 'flex:1;font-size:14px;color:var(--text);font-weight:700';
+    name.textContent = e.name;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'background:none;border:1px solid #ffcdd2;color:#b71c1c;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:Lato,sans-serif;font-weight:700';
+    btn.textContent = 'Supprimer';
+    btn.onclick = () => removeEntreprise(i);
+    row.append(swatch, name, btn);
+    container.appendChild(row);
+  });
+}
+
+function addEntreprise() {
+  const inp   = document.getElementById('settings-entreprise-input');
+  const color = document.getElementById('settings-entreprise-color').value;
+  const val   = inp.value.trim().slice(0, 80); // limite longueur
+  if (!val) return;
+  const list = loadEntreprises();
+  if (list.find(e => e.name === val)) { toast('Entreprise déjà présente'); return; }
+  list.push({ name: val, color: safeColor(color) });
+  saveEntreprises(list);
+  inp.value = '';
+  renderEntreprisesSettings();
+  toast('Entreprise ajoutée');
+}
+
+function removeEntreprise(i) {
+  const list = loadEntreprises();
+  list.splice(i, 1);
+  saveEntreprises(list);
+  renderEntreprisesSettings();
+  toast('Entreprise supprimée');
+}
+
+// ── Navigation ───────────────────────────────────────────
+const navStack = [];
+const BACK_MAP = {
+  's-new-audit': 's-home',
+  's-cats':      's-home',
+  's-items':     's-cats',
+  's-summary':   's-cats',
+  's-settings':  's-home'
+};
+
+let isNavigating = false;
+
+function navigate(id) {
+  navStack.push(currentScreen);
+  history.pushState({ n: navStack.length }, '', null);
+  showScreen(id);
+}
+
+window.addEventListener('popstate', () => {
+  if (isNavigating) return;
+  isNavigating = true;
+  history.pushState({ n: navStack.length }, '', null);
+  goBack();
+  setTimeout(() => { isNavigating = false; }, 300);
+});
+
+function goBack() {
+  if (quitOverlay) { dismissQuit(); return; }
+  if (currentScreen === 's-home') { showConfirmQuit(); return; }
+  const prev = navStack.length > 0 ? navStack.pop() : (BACK_MAP[currentScreen] || 's-home');
+  showScreen(prev);
+}
+
+let quitOverlay = null;
+function showConfirmQuit() {
+  if (quitOverlay) return;
+  quitOverlay = document.createElement('div');
+  quitOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:400;display:flex;align-items:flex-end';
+  quitOverlay.innerHTML = `<div style="width:100%;background:#fff;border-radius:16px 16px 0 0;padding:20px;font-family:Lato,sans-serif">
+    <div style="font-weight:700;font-size:16px;margin-bottom:8px;color:#1a2a2e">Quitter l'application ?</div>
+    <div style="font-size:13px;color:#6b8a90;margin-bottom:20px">Vos données sont sauvegardées. Utilisez le bouton retour du téléphone pour fermer l'application.</div>
+    <button onclick="dismissQuit()" style="background:#006878;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;width:100%">Rester dans l'application</button>
+  </div>`;
+  document.body.appendChild(quitOverlay);
+}
+function dismissQuit() { if (quitOverlay) { quitOverlay.remove(); quitOverlay = null; } }
+
+// ── FS helpers ───────────────────────────────────────────
+async function setupFolder() {
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    localStorage.setItem('folderName', dirHandle.name);
+    await loadAudits();
+    document.getElementById('folder-name').textContent = dirHandle.name;
+    navigate('s-home');
+  } catch(e) { if (e.name !== 'AbortError') toast('Erreur : ' + e.message); }
+}
+
+async function setupFolderFromSettings() {
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    localStorage.setItem('folderName', dirHandle.name);
+    await loadAudits();
+    document.getElementById('folder-name').textContent = dirHandle.name;
+    document.getElementById('settings-folder-name').textContent = dirHandle.name;
+    toast('Dossier mis à jour.');
+  } catch(e) { if (e.name !== 'AbortError') toast('Erreur : ' + e.message); }
+}
+
+async function writeJSON(n, d) {
+  const fh = await dirHandle.getFileHandle(n, { create: true });
+  const w  = await fh.createWritable();
+  await w.write(JSON.stringify(d, null, 2));
+  await w.close();
+}
+async function readJSON(n) {
+  try { const fh = await dirHandle.getFileHandle(n); const f = await fh.getFile(); return JSON.parse(await f.text()); }
+  catch { return null; }
+}
+async function writeFile(n, b) {
+  const fh = await dirHandle.getFileHandle(n, { create: true });
+  const w  = await fh.createWritable();
+  await w.write(b);
+  await w.close();
+}
+async function readAsDataURL(n) {
+  try {
+    const fh = await dirHandle.getFileHandle(n);
+    const f  = await fh.getFile();
+    return new Promise(r => { const rd = new FileReader(); rd.onload = e => r(e.target.result); rd.readAsDataURL(f); });
+  } catch { return null; }
+}
+async function loadAudits() { const d = await readJSON('audits.json'); audits = d || []; }
+// File de sauvegarde pour éviter les écritures concurrentes
+let _saveQueue = Promise.resolve();
+async function saveAudits() {
+  _saveQueue = _saveQueue.then(() => writeJSON('audits.json', audits));
+  return _saveQueue;
+}
+
+// ── Screen ───────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+  currentScreen = id;
+  if (id === 's-home')     { renderHome(); checkInstallStatus(); }
+  if (id === 's-cats')       renderCats();
+  if (id === 's-summary')    renderSummary();
+  if (id === 's-settings') {
+    document.getElementById('settings-folder-name').textContent =
+      dirHandle ? dirHandle.name : (localStorage.getItem('folderName') || 'Non configuré');
+    renderEntreprisesSettings();
+  }
+}
+
+let _toastTimer = null;
+function toast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; // textContent : pas de risque XSS
+  t.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.classList.remove('show'); _toastTimer = null; }, dur);
+}
+
+// ── Travaux ──────────────────────────────────────────────
+function toggleTravaux(el, val) {
+  el.classList.toggle('active');
+  if (selectedTravaux.includes(val)) selectedTravaux = selectedTravaux.filter(v => v !== val);
+  else selectedTravaux.push(val);
+}
+
+// ── Stats ────────────────────────────────────────────────
+function getStats(a) {
+  let done = 0, total = 0, nc = 0, am = 0;
+  CATS.forEach(c => c.items.forEach((_, i) => {
+    total++;
+    const s = (a.items || {})[c.id + '_' + c.items[i].id];
+    if (s && s.status) done++;
+    if (s && s.status === 'NC') nc++;
+    if (s && s.status === 'AM') am++;
+  }));
+  return { done, total, nc, am };
+}
+function getCatStats(a, catId) {
+  const cat = CATS.find(c => c.id === catId);
+  let done = 0, nc = 0, am = 0, ok = 0;
+  cat.items.forEach((_, i) => {
+    const s = (a.items || {})[catId + '_' + cat.items[i].id];
+    if (!s || !s.status) return;
+    done++; if (s.status==='NC') nc++; if (s.status==='AM') am++; if (s.status==='C') ok++;
+  });
+  return { done, total: cat.items.length, nc, am, ok };
+}
+
+// ── Home ─────────────────────────────────────────────────
+function renderHome() {
+  document.getElementById('folder-name').textContent =
+    dirHandle ? dirHandle.name : (localStorage.getItem('folderName') || 'Non configuré');
+  const list  = document.getElementById('audit-list');
+  const empty = document.getElementById('audit-list-empty');
+  if (!audits.length) { empty.style.display = 'block'; list.innerHTML = ''; return; }
+  empty.style.display = 'none';
+  // Construction DOM pour éviter XSS sur les données chantier
+  list.innerHTML = '';
+  audits.slice().reverse().forEach((a, ri) => {
+    const i   = audits.length - 1 - ri;
+    const st  = getStats(a);
+    const pct = st.total ? Math.round(st.done / st.total * 100) : 0;
+    const badgeClass = st.nc > 0 ? 'badge-ko' : st.am > 0 ? 'badge-warn' : 'badge-pending';
+    const badgeText  = st.nc > 0 ? st.nc + ' NC' : st.am > 0 ? st.am + ' AM' : st.done + '/' + st.total;
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.onclick = () => openAudit(i);
+    card.innerHTML = `
+      <div class="cat-icon" style="font-size:11px;background:#455a64">AUD</div>
+      <div class="cat-info">
+        <div class="cat-title">${esc(a.chantier)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:1px">${esc(a.date)} · ${esc(a.auditeur)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <span class="badge ${badgeClass}">${esc(badgeText)}</span>`;
+    list.appendChild(card);
+  });
+}
+function openAudit(idx) {
+  currentAudit = idx;
+  document.getElementById('cat-screen-title').textContent = audits[idx].chantier;
+  navigate('s-cats');
+}
+
+// ── Create ───────────────────────────────────────────────
+async function createAudit() {
+  const chantier = document.getElementById('f-chantier').value.trim();
+  const date     = document.getElementById('f-date').value;
+  const auditeur = document.getElementById('f-auditeur').value.trim();
+  if (!chantier || !date || !auditeur) { toast('Remplissez les champs obligatoires (*)'); return; }
+  const temp  = document.getElementById('f-temp').value;
+  const hygro = document.getElementById('f-hygro').value;
+  const tempN  = temp  ? Math.max(-20, Math.min(50,  Number(temp)))  : null;
+  const hygroN = hygro ? Math.max(0,   Math.min(100, Number(hygro))) : null;
+  const audit = {
+    id: 'audit_' + Date.now(), chantier, date, auditeur,
+    moa: document.getElementById('f-moa').value.trim(), code: document.getElementById('f-code').value.trim(), numero: document.getElementById('f-numero').value.trim(),
+    adresse: document.getElementById('f-adresse').value.trim(),
+    meteo: document.getElementById('f-meteo').value,
+    temp: tempN, hygro: hygroN,
+    travaux: [...selectedTravaux],
+    createdAt: new Date().toISOString(),
+    items: {}, photos: {}
+  };
+  audits.push(audit);
+  await saveAudits();
+  currentAudit = audits.length - 1;
+  document.getElementById('cat-screen-title').textContent = chantier;
+  ['f-chantier','f-moa','f-code','f-numero','f-adresse','f-auditeur','f-temp','f-hygro'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-date').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('f-meteo').value = '';
+  selectedTravaux = [];
+  document.querySelectorAll('.travaux-chip').forEach(c => c.classList.remove('active'));
+  navigate('s-cats');
+}
+
+// ── Cats ─────────────────────────────────────────────────
+function renderCats() {
+  const a  = audits[currentAudit];
+  const td = document.getElementById('travaux-display');
+  const tc = document.getElementById('travaux-display-chips');
+  if (a.travaux && a.travaux.length) {
+    td.style.display = 'block';
+    tc.innerHTML = a.travaux.map(t =>
+      `<span style="display:inline-block;background:var(--teal);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;margin:3px;font-weight:700">${esc(t)}</span>`
+    ).join('');
+  } else td.style.display = 'none';
+
+  document.getElementById('cat-list').innerHTML = CATS.map(cat => {
+    const st  = getCatStats(a, cat.id);
+    const pct = Math.round(st.done / st.total * 100);
+    const badge = st.nc > 0 ? `<span class="badge badge-ko">${st.nc} NC</span>`
+      : st.am > 0 ? `<span class="badge badge-warn">${st.am} AM</span>`
+      : (st.done === st.total && st.total > 0) ? `<span class="badge badge-ok">OK</span>`
+      : `<span class="badge badge-pending">${st.done}/${st.total}</span>`;
+    return `<div class="cat-card" onclick="openCat('${cat.id}')">
+      <div class="cat-icon" style="background:${cat.color}">${esc(cat.abbr)}</div>
+      <div class="cat-info">
+        <div class="cat-title">${esc(cat.label)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>${badge}
+    </div>`;
+  }).join('');
+}
+function openCat(catId) {
+  currentCatId = catId;
+  document.getElementById('items-title').textContent = CATS.find(c => c.id === catId).label;
+  renderItems();
+  navigate('s-items');
+}
+
+// ── Items ────────────────────────────────────────────────
+function renderItems() {
+  const a    = audits[currentAudit];
+  const cat  = CATS.find(c => c.id === currentCatId);
+  const entreprises = loadEntreprises();
+  const container = document.getElementById('items-list');
+  container.innerHTML = '';
+
+  cat.items.forEach((item, i) => {
+    const key    = currentCatId + '_' + item.id;
+    const data   = (a.items  || {})[key] || {};
+    const photos = (a.photos || {})[key] || [];
+    const selectedEntr = data.entreprises || [];
+
+    const block = document.createElement('div');
+    block.className = 'item-block';
+    block.id = 'item-' + key;
+
+    // Titre + sous-titre
+    const title = document.createElement('div');
+    title.className = 'item-title';
+    title.textContent = item.t;
+    block.appendChild(title);
+    if (item.sub) {
+      const sub = document.createElement('div');
+      sub.className = 'sub-item';
+      sub.textContent = '↳ ' + item.sub;
+      block.appendChild(sub);
+    }
+
+    // Boutons statut
+    const statusRow = document.createElement('div');
+    statusRow.className = 'status-row';
+    STATUSES.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'status-btn' + (data.status === s.v ? ' s-' + s.v : '');
+      btn.textContent = s.l;
+      btn.onclick = () => setStatus(key, s.v);
+      statusRow.appendChild(btn);
+    });
+    block.appendChild(statusRow);
+
+    // Chips entreprises
+    if (entreprises.length) {
+      const entrLabel = document.createElement('label');
+      entrLabel.textContent = 'Entreprise(s) responsable(s)';
+      block.appendChild(entrLabel);
+      const entrRow = document.createElement('div');
+      entrRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;margin-bottom:10px';
+      entreprises.forEach(e => {
+        const sel = selectedEntr.includes(e.name);
+        const chip = document.createElement('span');
+        chip.style.cssText = `display:inline-block;background:${sel ? safeColor(e.color) : '#fff'};color:${sel ? '#fff' : safeColor(e.color)};border:2px solid ${safeColor(e.color)};border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif`;
+        chip.textContent = e.name;
+        chip.onclick = () => toggleEntreprise(key, e.name);
+        entrRow.appendChild(chip);
+      });
+      block.appendChild(entrRow);
+    }
+
+    // Remarques
+    const remarquesLabel = document.createElement('label');
+    remarquesLabel.textContent = 'Remarques';
+    block.appendChild(remarquesLabel);
+    const textarea = document.createElement('textarea');
+    textarea.placeholder = 'Observations, constats...';
+    textarea.rows = 2;
+    textarea.value = data.note || '';
+    textarea.oninput = () => setNote(key, textarea.value);
+    block.appendChild(textarea);
+
+    // Photos
+    const photoHeader = document.createElement('div');
+    photoHeader.style.cssText = 'margin-top:10px';
+    const photoRow = document.createElement('div');
+    photoRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px';
+    const photoCount = document.createElement('span');
+    photoCount.style.cssText = 'font-size:12px;color:var(--muted);font-weight:700';
+    photoCount.textContent = 'PHOTOS (' + photos.length + ')';
+    const photoBtn = document.createElement('button');
+    photoBtn.style.cssText = 'background:var(--teal-light);border:1px solid var(--teal-mid);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--teal-dark);font-family:Lato,sans-serif;font-weight:700';
+    photoBtn.textContent = '+ Photo';
+    photoBtn.onclick = () => triggerPhoto(key);
+    photoRow.append(photoCount, photoBtn);
+    const grid = document.createElement('div');
+    grid.className = 'photo-grid';
+    grid.id = 'photos-' + key;
+    photos.forEach((fn, pi) => {
+      const img = document.createElement('img');
+      img.className = 'photo-thumb';
+      img.id = `th-${key}-${pi}`;
+      img.alt = '';
+      img.onclick = () => openViewer(key, pi);
+      grid.appendChild(img);
+    });
+    photoHeader.append(photoRow, grid);
+    block.appendChild(photoHeader);
+    container.appendChild(block);
+
+    // Chargement asynchrone des miniatures
+    photos.forEach((fn, pi) => loadThumb(key, pi, fn));
+  });
+}
+
+async function loadThumb(key, pi, fn) {
+  const img = document.getElementById(`th-${key}-${pi}`);
+  if (!img) return;
+  const d = await readAsDataURL(fn);
+  if (d && img) img.src = d;
+}
+
+async function setStatus(key, val) {
+  const a = audits[currentAudit];
+  if (!a.items[key]) a.items[key] = {};
+  a.items[key].status = a.items[key].status === val ? null : val;
+  await saveAudits();
+  renderItems();
+  renderCats();
+}
+async function setNote(key, val) {
+  const a = audits[currentAudit];
+  if (!a.items[key]) a.items[key] = {};
+  a.items[key].note = val;
+  await saveAudits();
+}
+async function toggleEntreprise(key, val) {
+  const a = audits[currentAudit];
+  if (!a.items[key]) a.items[key] = {};
+  if (!a.items[key].entreprises) a.items[key].entreprises = [];
+  const idx = a.items[key].entreprises.indexOf(val);
+  if (idx >= 0) a.items[key].entreprises.splice(idx, 1);
+  else a.items[key].entreprises.push(val);
+  await saveAudits();
+  renderItems();
+}
+
+// ── Photos ───────────────────────────────────────────────
+function triggerPhoto(key) { currentPhotoKey = key; document.getElementById('photo-menu').style.display = 'block'; }
+function closePhotoMenu() { document.getElementById('photo-menu').style.display = 'none'; }
+
+async function handlePhotos(e) {
+  const files = Array.from(e.target.files);
+  const a = audits[currentAudit];
+  if (!a.photos[currentPhotoKey]) a.photos[currentPhotoKey] = [];
+  for (const f of files) {
+    // Vérification type MIME
+    if (!f.type.startsWith('image/')) { toast('Fichier non supporté : ' + f.name); continue; }
+    const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().slice(0, 5);
+    const fn  = `photo_${a.id}_${currentPhotoKey}_${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+    await writeFile(fn, f);
+    a.photos[currentPhotoKey].push(fn);
+  }
+  await saveAudits();
+  renderItems();
+  toast(files.length + ' photo(s) ajoutée(s)');
+  e.target.value = '';
+}
+
+async function openViewer(key, idx) {
+  const a  = audits[currentAudit];
+  const fn = a.photos[key][idx];
+  const d  = await readAsDataURL(fn);
+  document.getElementById('viewer-img').src = d || '';
+  document.getElementById('viewer-del').onclick = () => removePhoto(key, idx);
+  document.getElementById('photo-viewer').style.display = 'flex';
+}
+function closeViewer() { document.getElementById('photo-viewer').style.display = 'none'; }
+
+async function removePhoto(key, idx) {
+  if (!confirm('Supprimer cette photo ?')) return;
+  audits[currentAudit].photos[key].splice(idx, 1);
+  await saveAudits();
+  closeViewer();
+  renderItems();
+  toast('Photo supprimée');
+}
+
+// ── Summary ──────────────────────────────────────────────
+function renderSummary() {
+  const a   = audits[currentAudit];
+  const st  = getStats(a);
+  const pct = st.total ? Math.round(st.done / st.total * 100) : 0;
+  const sl  = {C:'badge-ok', NC:'badge-ko', AM:'badge-warn', NV:'badge-na', NN:'badge-na'};
+  const ll  = {C:'Conforme', NC:'Non conforme', AM:'À améliorer', NV:'Non vérifié', NN:'Non concerné'};
+  let meteoLine = a.meteo || '';
+  if (a.temp  != null) meteoLine += (meteoLine ? ' · ' : '') + a.temp  + '°C';
+  if (a.hygro != null) meteoLine += (meteoLine ? ' · ' : '') + a.hygro + '% HR';
+
+  let html = `<div class="card" style="text-align:center;padding:20px">
+    <div style="width:68px;height:68px;border-radius:50%;border:3px solid var(--teal);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--teal);margin:0 auto 12px">${pct}%</div>
+    <div style="font-weight:700;font-size:16px">${esc(a.chantier)}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(a.date)} · ${esc(a.auditeur)}</div>
+    ${meteoLine ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(meteoLine)}</div>` : ''}
+    ${a.travaux && a.travaux.length ? `<div style="margin-top:10px">${a.travaux.map(t => `<span style="display:inline-block;background:var(--teal);color:#fff;border-radius:20px;padding:3px 10px;font-size:11px;margin:2px;font-weight:700">${esc(t)}</span>`).join('')}</div>` : ''}
+    <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="background:#e6f4ea;border-radius:8px;padding:10px"><div style="font-size:20px;font-weight:700;color:#1e6e35">${st.done}</div><div style="font-size:11px;color:#555">renseignés</div></div>
+      <div style="background:#fdecea;border-radius:8px;padding:10px"><div style="font-size:20px;font-weight:700;color:#b71c1c">${st.nc}</div><div style="font-size:11px;color:#555">non conformes</div></div>
+      <div style="background:#fff4e0;border-radius:8px;padding:10px"><div style="font-size:20px;font-weight:700;color:#b85c00">${st.am}</div><div style="font-size:11px;color:#555">à améliorer</div></div>
+    </div>
+  </div>`;
+
+  html += CATS.map(cat => {
+    const cst  = getCatStats(a, cat.id);
+    const rows = cat.items.map((item, i) => {
+      const key  = cat.id + '_' + cat.items[i].id;
+      const data = (a.items  || {})[key] || {};
+      const phot = (a.photos || {})[key] || [];
+      if (!data.status && !data.note && !phot.length) return '';
+      const entr = (data.entreprises || []).map(n => `<span style="font-size:11px;font-weight:700;color:var(--teal)">${esc(n)}</span>`).join(' · ');
+      return `<div style="padding:10px 0;border-bottom:0.5px solid #f0f0f0">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+          <div style="font-size:13px;font-weight:700;flex:1">${esc(item.t)}</div>
+          ${data.status ? `<span class="badge ${sl[data.status]}">${ll[data.status]}</span>` : ''}
+        </div>
+        ${entr ? `<div style="margin-top:3px">${entr}</div>` : ''}
+        ${data.note ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(data.note)}</div>` : ''}
+        ${phot.length ? `<div style="font-size:11px;color:var(--teal);margin-top:4px;font-weight:700">${phot.length} photo(s)</div>` : ''}
+      </div>`;
+    }).filter(Boolean).join('');
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="width:28px;height:28px;border-radius:6px;background:${cat.color};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">${esc(cat.abbr)}</div>
+        <span style="font-weight:700;font-size:14px">${esc(cat.label)}</span>
+        <span style="margin-left:auto" class="badge ${cst.nc>0?'badge-ko':cst.am>0?'badge-warn':'badge-pending'}">${cst.nc>0?cst.nc+' NC':cst.am>0?cst.am+' AM':cst.done+'/'+cst.total}</span>
+      </div>
+      ${rows || '<div style="font-size:13px;color:var(--muted)">Aucun item renseigné</div>'}
+    </div>`;
+  }).join('');
+  document.getElementById('summary-content').innerHTML = html;
+}
+
+// ── Export Word ──────────────────────────────────────────
+async function exportWord() {
+  const a = audits[currentAudit];
+  if (!window.docx) {
+    toast('Chargement de la librairie Word…', 4000);
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/docx@8.5.0/build/index.umd.js';
+      s.onload = res;
+      s.onerror = () => rej(new Error('Impossible de charger la librairie docx.js. Vérifiez votre connexion internet.'));
+      document.head.appendChild(s);
+    }).catch(err => { toast('Erreur : ' + err.message, 6000); throw err; });
+  }
+  if (!window.docx) { toast('Librairie Word non disponible.', 6000); return; }
+
+  toast('Génération du document Word…', 8000);
+
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          ImageRun, AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign,
+          Header, PageNumber, TabStopType, Tab } = window.docx;
+  const F_T = CONFIG.FONT_TITLE, F_B = CONFIG.FONT_BODY, ACC = CONFIG.ACCENT.replace('#', '');
+
+  async function compressPhoto(arrayBuffer) {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(new Blob([arrayBuffer]));
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 600;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r); }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        c.toBlob(b => b.arrayBuffer().then(buf => resolve({ buf, w, h })), 'image/jpeg', 0.60);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  const NO_B  = { style: BorderStyle.NONE, size: 0 };
+  const NOOP  = { top: NO_B, bottom: NO_B, left: NO_B, right: NO_B };
+  const THIN  = { style: BorderStyle.SINGLE, size: 4, color: 'DDE3E5' };
+  const CELL  = { top: THIN, bottom: THIN, left: THIN, right: THIN };
+  const ll    = { C:'Conforme', NC:'Non conforme', AM:'À améliorer', NV:'Non vérifié', NN:'Non concerné' };
+  const badgeBg = { C:'E6F4EA', NC:'FDECEA', AM:'FFF4E0', NV:'F5F7F8', NN:'F5F7F8' };
+  const badgeFg = { C:'1E6E35', NC:'B71C1C', AM:'B85C00', NV:'546E7A', NN:'78909C' };
+
+  function makeBadge(status) {
+    if (!status) return new Paragraph({ text: '' });
+    return new Table({
+      width: { size: 40, type: WidthType.PERCENTAGE }, borders: NOOP,
+      rows: [new TableRow({ children: [new TableCell({
+        shading: { type: ShadingType.SOLID, color: badgeBg[status] },
+        borders: NOOP,
+        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+        children: [new Paragraph({ alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: ll[status], bold: true, size: 18, color: badgeFg[status] })] })]
+      })]})],
+    });
+  }
+
+  const children = [];
+  let meteoLine = a.meteo || '';
+  if (a.temp  != null) meteoLine += (meteoLine ? ' · ' : '') + a.temp  + ' °C';
+  if (a.hygro != null) meteoLine += (meteoLine ? ' · ' : '') + 'Humidité : ' + a.hygro + ' %';
+
+
+  // Tableau infos
+  const infoRows = [
+    ['Date de visite', a.date,            'Auditeur',    a.auditeur],
+    ['Adresse', a.adresse || '—',         'Météo',       meteoLine || '—'],
+    ['Travaux en cours', a.travaux?.length ? a.travaux.join(', ') : '—', 'Généré le', new Date().toLocaleDateString('fr-FR')],
+  ];
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE }, borders: CELL,
+    rows: infoRows.map(row => new TableRow({ children: row.map((cell, i) => new TableCell({
+      width: { size: 25, type: WidthType.PERCENTAGE },
+      shading: i % 2 === 0 ? { type: ShadingType.SOLID, color: 'D9D9D9' } : undefined,
+      borders: CELL,
+      margins: { top: 80, bottom: 80, left: 120, right: 120 },
+      children: [new Paragraph({ children: [new TextRun({ text: String(cell ?? ''), bold: i % 2 === 0, size: 20 })] })]
+    }))})),
+  }));
+  children.push(new Paragraph({ text: '', spacing: { after: 320 } }));
+
+  const entreprisesList = loadEntreprises();
+
+  for (const cat of CATS) {
+    const catItems = [];
+    for (let i = 0; i < cat.items.length; i++) {
+      const key  = cat.id + '_' + cat.items[i].id;
+      const data = (a.items  || {})[key] || {};
+      const pf   = (a.photos || {})[key] || [];
+      if (!data.status && !data.note && !pf.length) continue;
+      catItems.push({ i, key, data, photoFiles: pf });
+    }
+    if (!catItems.length) continue;
+
+    children.push(new Paragraph({
+      spacing: { before: 400, after: 0 },
+      children: [new TextRun({ text: cat.label.toUpperCase(), bold: true, size: 26, font: F_T, color: ACC })],
+    }));
+
+    const tableRows = [];
+    tableRows.push(new TableRow({
+      tableHeader: true,
+      children: [new TableCell({
+        columnSpan: 2, width: { size: 100, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.SOLID, color: ACC },
+        borders: NOOP,
+        margins: { top: 100, bottom: 100, left: 200, right: 200 },
+        children: [new Paragraph({ children: [
+          new TextRun({ text: 'Point examiné  ·  Statut  ·  Remarques', bold: true, color: 'FFFFFF', size: 20 }),
+          new TextRun({ text: '          ', size: 20 }),
+          new TextRun({ text: 'Photos', bold: true, color: 'FFFFFF', size: 20 }),
+        ]})],
+      })],
+    }));
+
+    for (const { i, key, data, photoFiles } of catItems) {
+      const item = cat.items[i];
+      const entreprises = (data.entreprises || []).map(name => {
+        const found = entreprisesList.find(e => e.name === name);
+        return { name, color: found ? found.color.replace('#','') : ACC };
+      });
+
+      const leftContent = [
+        new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
+        ...(item.sub ? [new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: item.sub, italics: true, size: 18, color: '6B8A90' })] })] : []),
+        makeBadge(data.status),
+        ...entreprises.map(e => new Paragraph({
+          spacing: { before: 60, after: 0 },
+          children: [new TextRun({ text: '▌ ' + e.name, bold: true, size: 18, color: e.color })]
+        })),
+        ...(data.note ? [new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: data.note, size: 20, color: '333333' })] })] : []),
+      ];
+
+      const rightContent = [];
+      for (const fn of photoFiles) {
+        try {
+          const fh  = await dirHandle.getFileHandle(fn);
+          const buf = await (await fh.getFile()).arrayBuffer();
+          const compressed = await compressPhoto(buf);
+          if (!compressed) continue;
+          const isLandscape = compressed.w >= compressed.h;
+          let dispW, dispH;
+          if (isLandscape) {
+            const r = Math.min(1, 320 / compressed.w);
+            dispW = Math.round(compressed.w * r); dispH = Math.round(compressed.h * r);
+          } else {
+            const r = Math.min(1, 240 / compressed.h);
+            dispW = Math.round(compressed.w * r); dispH = Math.round(compressed.h * r);
+          }
+          rightContent.push(new Paragraph({
+            spacing: { before: 60, after: 80 },
+            children: [new ImageRun({ data: compressed.buf, transformation: { width: dispW, height: dispH }, type: 'jpg' })],
+          }));
+        } catch(e) { /* photo inaccessible */ }
+      }
+      if (!rightContent.length) rightContent.push(new Paragraph({ text: '' }));
+
+      tableRows.push(new TableRow({ children: [
+        new TableCell({ width: { size: 40, type: WidthType.PERCENTAGE }, borders: CELL,
+          margins: { top: 100, bottom: 100, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP, children: leftContent }),
+        new TableCell({ width: { size: 60, type: WidthType.PERCENTAGE }, borders: CELL,
+          margins: { top: 100, bottom: 100, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: rightContent }),
+      ]}));
+    }
+    children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: CELL, rows: tableRows }));
+  }
+
+  // Page de garde (colonne de droite) + en-tête « Compte-rendu de visite n° … / Semaine … / p X/Y »
+  const PG = { page: { margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } };
+  const dt = new Date(a.date + 'T12:00:00');
+  const dLong = dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const wk = (() => { const t = new Date(dt); t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7); const w1 = new Date(t.getFullYear(), 0, 4); return 1 + Math.round(((t - w1) / 864e5 - 3 + (w1.getDay() + 6) % 7) / 7); })();
+  const rule = { top: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 6 } };
+  const lab = (t, ind) => new Paragraph({ indent: { left: ind }, spacing: { before: 300, after: 40 }, border: rule, children: [new TextRun({ text: t, size: 14, font: F_B })] });
+  const big = (t, sz, ind, b) => new Paragraph({ indent: { left: ind }, children: [new TextRun({ text: t, size: sz, bold: !!b, font: F_T, allCaps: true })] });
+  const R = 4700, cover = [lab("MAÎTRISE D'OUVRAGE", 0), big(a.moa || '—', 44, 0)];
+  if (a.code) cover.push(lab('OPÉRATION', R), big(a.code, a.code.length <= 4 ? 200 : 90, R));
+  cover.push(big(a.chantier, 28, R, true), lab('LOCALISATION', R), big(a.adresse || '—', 36, R), lab('DOCUMENT', R),
+    ...CONFIG.DOC_TITLE.map(t => big(t, 40, R)));
+  if (a.numero) cover.push(lab('NUMÉRO', R), big(CONFIG.NUM_PREFIX + a.numero, 40, R));
+  cover.push(lab('DATE DE VISITE', R), big(dLong, 40, R));
+  const hdr = new Header({ children: [
+    new Paragraph({ children: [new TextRun({ text: CONFIG.FIRM, bold: true, size: 20, font: F_B })] }),
+    new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: 9638 }],
+      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'A6A6A6', space: 4 } }, children: [
+      new TextRun({ text: `Compte-rendu de visite ${a.numero ? 'n°' + a.numero + ' ' : ''}du ${dLong} / Semaine ${wk}`, bold: true, size: 20, font: F_B }),
+      new TextRun({ children: [new Tab(), 'p ', PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES], bold: true, size: 20, font: F_B }),
+    ] }),
+  ] });
+  const blob = await Packer.toBlob(new Document({
+    styles: { default: { document: { run: { font: F_B } } } },
+    sections: [{ properties: PG, children: cover }, { properties: PG, headers: { default: hdr }, children }],
+  }));
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = `Rapport_${a.chantier.replace(/[^a-zA-Z0-9]/g,'_')}_${a.date}.docx`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toast('Document Word téléchargé.', 3500);
+}
+
+// ── Export HTML ──────────────────────────────────────────
+async function exportReport() {
+  const a  = audits[currentAudit];
+  toast('Génération du rapport…', 6000);
+  const ll = {C:'Conforme', NC:'Non conforme', AM:'À améliorer', NV:'Non vérifié', NN:'Non concerné'};
+  const cl = {C:'#1e6e35', NC:'#b71c1c', AM:'#b85c00', NV:'#546e7a', NN:'#78909c'};
+  const bg = {C:'#e6f4ea', NC:'#fdecea', AM:'#fff4e0', NV:'#f5f7f8', NN:'#f5f7f8'};
+  const st = getStats(a);
+  const entreprisesList = loadEntreprises();
+  let meteoLine = a.meteo || '';
+  if (a.temp  != null) meteoLine += (meteoLine ? ' · ' : '') + a.temp  + ' °C';
+  if (a.hygro != null) meteoLine += (meteoLine ? ' · ' : '') + 'Humidité : ' + a.hygro + ' %';
+
+  let body = `
+  <div style="background:#006878;padding:32px 36px;margin-bottom:28px">
+    <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">Rapport de visite</div>
+    <h1 style="color:#fff;font-size:24px;margin-bottom:4px;font-weight:700">${esc(a.chantier)}</h1>
+    <div style="color:rgba(255,255,255,.75);font-size:14px">${esc(a.adresse || '')}</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px">
+    <tr>
+      <td style="padding:9px 12px;border:1px solid #dde3e5;font-weight:700;background:#f0f4f5;width:22%">Date de visite</td>
+      <td style="padding:9px 12px;border:1px solid #dde3e5;width:28%">${esc(a.date)}</td>
+      <td style="padding:9px 12px;border:1px solid #dde3e5;font-weight:700;background:#f0f4f5;width:22%">Auditeur</td>
+      <td style="padding:9px 12px;border:1px solid #dde3e5">${esc(a.auditeur)}</td>
+    </tr>
+    ${meteoLine ? `<tr><td style="padding:9px 12px;border:1px solid #dde3e5;font-weight:700;background:#f0f4f5">Conditions météo</td><td style="padding:9px 12px;border:1px solid #dde3e5" colspan="3">${esc(meteoLine)}</td></tr>` : ''}
+    ${a.travaux && a.travaux.length ? `<tr><td style="padding:9px 12px;border:1px solid #dde3e5;font-weight:700;background:#f0f4f5">Travaux en cours</td><td style="padding:9px 12px;border:1px solid #dde3e5" colspan="3">${esc(a.travaux.join(', '))}</td></tr>` : ''}
+    <tr><td style="padding:9px 12px;border:1px solid #dde3e5;font-weight:700;background:#f0f4f5">Généré le</td><td style="padding:9px 12px;border:1px solid #dde3e5" colspan="3">${new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</td></tr>
+  </table>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin:24px 0 32px">
+    <div style="background:#f0f4f5;border-radius:8px;padding:14px;text-align:center;border:1px solid #dde3e5"><div style="font-size:26px;font-weight:700;color:#006878">${st.done}</div><div style="font-size:11px;color:#6b8a90;margin-top:2px">Items renseignés</div></div>
+    <div style="background:#e6f4ea;border-radius:8px;padding:14px;text-align:center;border:1px solid #c8e6c9"><div style="font-size:26px;font-weight:700;color:#1e6e35">${st.done-st.nc-st.am}</div><div style="font-size:11px;color:#6b8a90;margin-top:2px">Conformes</div></div>
+    <div style="background:#fff4e0;border-radius:8px;padding:14px;text-align:center;border:1px solid #ffe0b2"><div style="font-size:26px;font-weight:700;color:#b85c00">${st.am}</div><div style="font-size:11px;color:#6b8a90;margin-top:2px">À améliorer</div></div>
+    <div style="background:#fdecea;border-radius:8px;padding:14px;text-align:center;border:1px solid #ffcdd2"><div style="font-size:26px;font-weight:700;color:#b71c1c">${st.nc}</div><div style="font-size:11px;color:#6b8a90;margin-top:2px">Non conformes</div></div>
+  </div>`;
+
+  for (const cat of CATS) {
+    let rows = ''; let hasContent = false;
+    for (let i = 0; i < cat.items.length; i++) {
+      const key  = cat.id + '_' + cat.items[i].id;
+      const data = (a.items  || {})[key] || {};
+      const pf   = (a.photos || {})[key] || [];
+      if (!data.status && !data.note && !pf.length) continue;
+      hasContent = true;
+
+      let photoHtml = '';
+      if (pf.length) {
+        photoHtml = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+        for (const fn of pf) {
+          const d = await readAsDataURL(fn);
+          if (d) photoHtml += `<img src="${d}" style="height:160px;width:auto;max-width:100%;object-fit:cover;border-radius:4px;border:1px solid #dde3e5;display:block" alt="">`;
+        }
+        photoHtml += '</div>';
+      }
+
+      const entrHtml = data.entreprises && data.entreprises.length
+        ? `<div style="margin-top:5px;margin-bottom:4px">${data.entreprises.map(name => {
+            const found = entreprisesList.find(e => e.name === name);
+            const color = found ? safeColor(found.color) : '#006878';
+            return `<span style="display:inline-block;background:${color};color:#fff;border-radius:4px;padding:2px 9px;font-size:11px;font-weight:700;margin:2px">${esc(name)}</span>`;
+          }).join('')}</div>` : '';
+
+      const stat = data.status
+        ? `<div style="display:inline-block;background:${bg[data.status]};color:${cl[data.status]};padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;margin-bottom:6px">${ll[data.status]}</div><br>` : '';
+
+      rows += `<tr>
+        <td style="padding:12px 14px;border:1px solid #dde3e5;vertical-align:top;width:35%">
+          <div style="font-weight:700;font-size:13px;color:#1a2a2e">${esc(cat.items[i].t)}</div>
+          ${cat.items[i].sub ? `<div style="font-size:11px;color:#6b8a90;margin-top:3px;line-height:1.4">${esc(cat.items[i].sub)}</div>` : ''}
+          ${stat}${entrHtml}
+          ${data.note ? `<div style="font-size:13px;color:#333;line-height:1.5;margin-top:4px">${esc(data.note)}</div>` : ''}
+        </td>
+        <td style="padding:12px 14px;border:1px solid #dde3e5;vertical-align:top">${photoHtml}</td>
+      </tr>`;
+    }
+    if (!hasContent) continue;
+    body += `<div style="margin-top:32px">
+      <div style="background:#006878;color:#fff;padding:10px 16px;font-weight:700;font-size:13px;letter-spacing:.5px">${esc(cat.label.toUpperCase())}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f0f4f5">
+          <th style="padding:9px 14px;border:1px solid #dde3e5;text-align:left;font-size:11px;color:#6b8a90;font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:35%">Point examiné · Statut · Remarques</th>
+          <th style="padding:9px 14px;border:1px solid #dde3e5;text-align:left;font-size:11px;color:#6b8a90;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Photos</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+<title>Audit ${esc(a.chantier)} – ${esc(a.date)}</title>
+<style>body{font-family:'Lato',Arial,sans-serif;color:#1a2a2e;margin:0 auto;padding:30px;max-width:960px}
+@media print{body{padding:0;max-width:100%}@page{margin:15mm}table{page-break-inside:auto}tr{page-break-inside:avoid}}</style>
+</head><body>${body}
+<div style="margin-top:40px;padding-top:12px;border-top:1px solid #dde3e5;font-size:11px;color:#aaa">
+  Rapport généré le ${new Date().toLocaleDateString('fr-FR')} — Audit Environnemental Chantier
+</div></body></html>`;
+
+  const fname = `Rapport_${a.chantier.replace(/[^a-zA-Z0-9]/g,'_')}_${a.date}.html`;
+  await writeFile(fname, new Blob([html], { type: 'text/html;charset=utf-8' }));
+  toast('Rapport sauvegardé : ' + fname, 5000);
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 800); }
+}
+
+// ── Divers ───────────────────────────────────────────────
+function dismissInstall() { localStorage.setItem('installDismissed','1'); document.getElementById('install-banner').style.display='none'; }
+function checkInstallStatus() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  const dismissed    = localStorage.getItem('installDismissed');
+  const banner       = document.getElementById('install-banner');
+  if (banner && !isStandalone && !dismissed) banner.style.display = 'block';
+}
+
+// ── Init ─────────────────────────────────────────────────
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+CONFIG.TRAVAUX.forEach(t => {
+  const chip = document.createElement('span');
+  chip.className = 'travaux-chip'; chip.textContent = t;
+  chip.onclick = () => toggleTravaux(chip, t);
+  document.getElementById('travaux-chips').appendChild(chip);
+});
+const sn = localStorage.getItem('folderName');
+if (sn) document.getElementById('folder-name').textContent = sn;
+history.replaceState({ n: 0 }, '', null);
+history.pushState({ n: 1 }, '', null);
+try {
+  if (!('showDirectoryPicker' in window)) {
+    showScreen('s-compat');
+  } else {
+    const savedName = localStorage.getItem('folderName');
+    if (savedName) {
+      const el = document.getElementById('setup-prev');
+      el.style.display = 'block';
+      el.textContent = 'Dossier précédent : ' + savedName;
+    }
+    showScreen('s-setup');
+  }
+} catch(e) {
+  console.error('Init error:', e);
+  showScreen('s-setup');
+}
+</script>
+</body>
+</html>
