@@ -5,7 +5,6 @@ Application mobile de suivi environnemental de chantier, conçue pour les visite
 Adaptée de l'outil [Audits_Environnementaux](https://github.com/LouisArep/Audits_Environnementaux) (LouisArep), développé avec l'assistance de Claude (Anthropic).
 
 **Tester l'application : https://jamesolivier18.github.io/Audit_CFIE/**
-*(remplacer VOTRE-PSEUDO et NOM-DU-DEPOT par votre identifiant GitHub et le nom de ce dépôt, une fois GitHub Pages activé)*
 
 ---
 
