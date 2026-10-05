@@ -134,7 +134,7 @@ input[type=file]{display:none}
       </div>
     </div>
     <div class="card" style="text-align:center;color:var(--muted);font-size:13px;padding:18px">
-      Version 2.0 — Suivi chantier faible impact environnemental
+      Version 3.0 — Suivi chantier faible impact environnemental
     </div>
   </div>
 </div>
@@ -180,11 +180,7 @@ input[type=file]{display:none}
   <div class="content">
     <div class="card">
       <div style="margin-bottom:14px"><label>Nom du chantier *</label><input type="text" id="f-chantier" placeholder="Ex : Résidence Les Acacias" maxlength="100"></div>
-      <div style="margin-bottom:14px"><label>Maîtrise d'ouvrage</label><input type="text" id="f-moa" placeholder="Ex : SOGARIS HAROPA PORT" maxlength="100"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div><label>Code opération</label><input type="text" id="f-code" placeholder="Ex : AMA" maxlength="12"></div>
-        <div><label>N° de visite</label><input type="text" id="f-numero" placeholder="Ex : 01" maxlength="12"></div>
-      </div>
+      <div style="margin-bottom:14px"><label>N° de visite</label><input type="text" id="f-numero" placeholder="Ex : 1 (donne VIS01)" maxlength="12"></div>
       <div style="margin-bottom:14px"><label>Adresse</label><input type="text" id="f-adresse" placeholder="Rue, ville..." maxlength="200"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <div><label>Date *</label><input type="date" id="f-date"></div>
@@ -276,6 +272,7 @@ input[type=file]{display:none}
 <input type="file" id="fi-cam" accept="image/*" capture="environment" onchange="handlePhotos(event)">
 <input type="file" id="fi-gal" accept="image/*" multiple onchange="handlePhotos(event)">
 
+<script src="assets.js"></script>
 <script src="checklist.js" onerror="document.body.innerHTML='<p style=&quot;padding:24px;font-family:sans-serif&quot;>Fichier <b>checklist.js</b> introuvable : il doit être dans le même dossier que index.html.</p>'"></script>
 <script>
 'use strict';
@@ -570,7 +567,7 @@ async function createAudit() {
   const hygroN = hygro ? Math.max(0,   Math.min(100, Number(hygro))) : null;
   const audit = {
     id: 'audit_' + Date.now(), chantier, date, auditeur,
-    moa: document.getElementById('f-moa').value.trim(), code: document.getElementById('f-code').value.trim(), numero: document.getElementById('f-numero').value.trim(),
+    numero: document.getElementById('f-numero').value.trim(),
     adresse: document.getElementById('f-adresse').value.trim(),
     meteo: document.getElementById('f-meteo').value,
     temp: tempN, hygro: hygroN,
@@ -582,7 +579,7 @@ async function createAudit() {
   await saveAudits();
   currentAudit = audits.length - 1;
   document.getElementById('cat-screen-title').textContent = chantier;
-  ['f-chantier','f-moa','f-code','f-numero','f-adresse','f-auditeur','f-temp','f-hygro'].forEach(id => document.getElementById(id).value = '');
+  ['f-chantier','f-numero','f-adresse','f-auditeur','f-temp','f-hygro'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-date').value  = new Date().toISOString().split('T')[0];
   document.getElementById('f-meteo').value = '';
   selectedTravaux = [];
@@ -667,6 +664,20 @@ function renderItems() {
     });
     block.appendChild(statusRow);
 
+    // Rappels de pénalité (Non conforme uniquement) : 1, 2 ou aucun
+    const pen = CONFIG.PENALITES[item.pen];
+    if (data.status === 'NC' && pen) {
+      const penRow = document.createElement('div');
+      penRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px';
+      [['p1', 'Rappel pénalité 1'], ['p2', 'Rappel pénalité 2']].forEach(([v, l]) => {
+        const sel = data.pen === v, chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-block;border:2px solid #b71c1c;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;background:' + (sel ? '#b71c1c' : '#fff') + ';color:' + (sel ? '#fff' : '#b71c1c');
+        chip.textContent = l; chip.onclick = () => setPen(key, v); penRow.appendChild(chip);
+      });
+      block.appendChild(penRow);
+      if (data.pen) { const ph = document.createElement('div'); ph.className = 'sub-item'; ph.textContent = pen[data.pen]; block.appendChild(ph); }
+    }
+
     // Chips entreprises
     if (entreprises.length) {
       const entrLabel = document.createElement('label');
@@ -743,6 +754,13 @@ async function setStatus(key, val) {
   await saveAudits();
   renderItems();
   renderCats();
+}
+async function setPen(key, val) {
+  const a = audits[currentAudit];
+  if (!a.items[key]) a.items[key] = {};
+  a.items[key].pen = a.items[key].pen === val ? null : val;
+  await saveAudits();
+  renderItems();
 }
 async function setNote(key, val) {
   const a = audits[currentAudit];
@@ -875,7 +893,7 @@ async function exportWord() {
 
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
           ImageRun, AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign,
-          Header, PageNumber, TabStopType, Tab } = window.docx;
+          Header, Footer, PageNumber, TabStopType, Tab } = window.docx;
   const F_T = CONFIG.FONT_TITLE, F_B = CONFIG.FONT_BODY, ACC = CONFIG.ACCENT.replace('#', '');
 
   async function compressPhoto(arrayBuffer) {
@@ -988,6 +1006,7 @@ async function exportWord() {
         new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
         ...(item.sub ? [new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: item.sub, italics: true, size: 18, color: '6B8A90' })] })] : []),
         makeBadge(data.status),
+        ...((data.status === 'NC' && data.pen && CONFIG.PENALITES[item.pen]?.[data.pen]) ? [new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: CONFIG.PENALITES[item.pen][data.pen], bold: true, size: 18, color: 'B71C1C' })] })] : []),
         ...entreprises.map(e => new Paragraph({
           spacing: { before: 60, after: 0 },
           children: [new TextRun({ text: '▌ ' + e.name, bold: true, size: 18, color: e.color })]
@@ -1029,35 +1048,59 @@ async function exportWord() {
     children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: CELL, rows: tableRows }));
   }
 
-  // Page de garde (colonne de droite) + en-tête « Compte-rendu de visite n° … / Semaine … / p X/Y »
-  const PG = { page: { margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } };
+  // Cartouche AREP (page de garde), en-tête avec logo, pied de page
+  const PG1 = { page: { margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } };
+  const PG2 = { page: { margin: { top: 1700, bottom: 1134, left: 1134, right: 1134, header: 450, footer: 450 } } };
+  const W = 9638, AL = AlignmentType, PCT = WidthType.PERCENTAGE, GREY = '595959';
   const dt = new Date(a.date + 'T12:00:00');
   const dLong = dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   const wk = (() => { const t = new Date(dt); t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7); const w1 = new Date(t.getFullYear(), 0, 4); return 1 + Math.round(((t - w1) / 864e5 - 3 + (w1.getDay() + 6) % 7) / 7); })();
-  const rule = { top: { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 6 } };
-  const lab = (t, ind) => new Paragraph({ indent: { left: ind }, spacing: { before: 300, after: 40 }, border: rule, children: [new TextRun({ text: t, size: 14, font: F_B })] });
-  const big = (t, sz, ind, b) => new Paragraph({ indent: { left: ind }, children: [new TextRun({ text: t, size: sz, bold: !!b, font: F_T, allCaps: true })] });
-  const R = 4700, cover = [lab("MAÎTRISE D'OUVRAGE", 0), big(a.moa || '—', 44, 0)];
-  if (a.code) cover.push(lab('OPÉRATION', R), big(a.code, a.code.length <= 4 ? 200 : 90, R));
-  cover.push(big(a.chantier, 28, R, true), lab('LOCALISATION', R), big(a.adresse || '—', 36, R), lab('DOCUMENT', R),
-    ...CONFIG.DOC_TITLE.map(t => big(t, 40, R)));
-  if (a.numero) cover.push(lab('NUMÉRO', R), big(CONFIG.NUM_PREFIX + a.numero, 40, R));
-  cover.push(lab('DATE DE VISITE', R), big(dLong, 40, R));
+  const b64 = x => Uint8Array.from(atob(x), c => c.charCodeAt(0));
+  const nVis = String(a.numero || '').trim();
+  const visRef = CONFIG.VISIT_PREFIX + (/^\d+$/.test(nVis) ? nVis.padStart(2, '0') : (nVis.toUpperCase() || '00'));
+  const LINE = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 4 };
+  const BOX = { style: BorderStyle.SINGLE, size: 4, color: '808080' }, BOXES = { top: BOX, bottom: BOX, left: BOX, right: BOX };
+  const T = (text, o = {}) => new TextRun({ text, font: o.t ? F_T : F_B, size: o.size || 18, bold: !!o.b, color: o.color, allCaps: !!o.caps });
+  const Pa = (runs, o = {}) => new Paragraph({ alignment: o.al, spacing: { before: o.before || 0, after: o.after || 0 }, border: o.border,
+    tabStops: o.tab ? [{ type: TabStopType.RIGHT, position: W }] : undefined, children: runs });
+  const cell = (kids, pct) => new TableCell({ width: { size: pct, type: PCT }, borders: BOXES, margins: { top: 80, bottom: 80, left: 140, right: 140 }, children: kids });
+  const actors = (list, label) => list.flatMap((x, i) => [
+    Pa([T(x.nom, { b: true }), ...(i === 0 ? [new TextRun({ children: [new Tab(), label], font: F_B, size: 16, bold: true })] : [])], { before: 160, tab: true, border: i === 0 ? { top: LINE } : undefined }),
+    Pa([T('Adresse : ', { b: true, size: 16 }), T(x.adresse, { size: 16 })]),
+  ]);
+  const gap = h => new Paragraph({ spacing: { before: h, after: 0 }, children: [] });
+  const cover = [
+    Pa([T(a.chantier, { t: 1, size: 56, color: GREY, caps: 1 })], { al: AL.CENTER, before: 120, after: 120, border: { top: LINE, bottom: LINE } }),
+    new Paragraph({ spacing: { before: 200, after: 120 }, children: [new ImageRun({ data: b64(ASSETS.COUVERTURE), transformation: { width: 640, height: Math.round(640 / ASSETS.COUVERTURE_RATIO) }, type: 'jpg' })] }),
+    Pa([T('Adresse du Projet :', { b: true, size: 16 })], { al: AL.RIGHT }),
+    Pa([T(a.adresse || '—', { size: 16 })], { al: AL.RIGHT, after: 200 }),
+    ...actors(CONFIG.MOA, "MAÎTRISE D'OUVRAGE"), ...actors(CONFIG.MOE, "MAÎTRISE D'OEUVRE"), gap(240),
+    new Table({ width: { size: 100, type: PCT }, borders: NOOP, rows: [new TableRow({ children: [cell([Pa([T('Établi par : ', { size: 16, color: GREY }), T(CONFIG.AUTEUR, { size: 16, color: GREY })])], 100)] })] }),
+    Pa([T(CONFIG.DOC_TITLE, { t: 1, size: 44, color: GREY, caps: 1 })], { al: AL.CENTER, before: 360, after: 360, border: { top: LINE } }),
+    new Table({ width: { size: 100, type: PCT }, borders: NOOP, rows: [new TableRow({ children: [cell([Pa([T('Date : ', { size: 16, color: GREY }), T(dLong.toUpperCase(), { size: 28, color: GREY })])], 100)] })] }),
+    gap(120),
+    new Table({ width: { size: 100, type: PCT }, borders: NOOP, rows: [new TableRow({ children: [[CONFIG.EMETTEUR, 'ÉMETTEUR', 38], [visRef, 'NUMÉRO DU DOCUMENT', 42], [CONFIG.INDICE, 'INDICE', 20]].map(([v, l, w]) =>
+      cell([Pa([T(v, { t: 1, size: 30, color: GREY })], { al: AL.CENTER }), Pa([T(l, { size: 14, color: GREY })], { al: AL.CENTER })], w)) })] }),
+  ];
+  const ref = `${CONFIG.FILE_PREFIX}-${visRef}-${CONFIG.INDICE}-${CONFIG.FILE_SUFFIX}`;
   const hdr = new Header({ children: [
-    new Paragraph({ children: [new TextRun({ text: CONFIG.FIRM, bold: true, size: 20, font: F_B })] }),
-    new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: 9638 }],
-      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'A6A6A6', space: 4 } }, children: [
-      new TextRun({ text: `Compte-rendu de visite ${a.numero ? 'n°' + a.numero + ' ' : ''}du ${dLong} / Semaine ${wk}`, bold: true, size: 20, font: F_B }),
-      new TextRun({ children: [new Tab(), 'p ', PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES], bold: true, size: 20, font: F_B }),
-    ] }),
+    new Table({ width: { size: 100, type: PCT }, borders: NOOP, rows: [new TableRow({ children: [
+      new TableCell({ width: { size: 30, type: PCT }, borders: NOOP, children: [new Paragraph({ children: [new ImageRun({ data: b64(ASSETS.LOGO), transformation: { width: 90, height: Math.round(90 / ASSETS.LOGO_RATIO) }, type: 'png' })] })] }),
+      new TableCell({ width: { size: 70, type: PCT }, borders: NOOP, children: [
+        Pa([T(a.chantier, { b: true, size: 16, caps: 1 })], { al: AL.RIGHT }),
+        Pa([T(CONFIG.DOC_TITLE, { size: 16, caps: 1 })], { al: AL.RIGHT }),
+        Pa([T(`${visRef} - Ind. ${CONFIG.INDICE} - ${dLong} - Semaine ${wk}`, { size: 16 })], { al: AL.RIGHT }) ] }),
+    ] })] }),
+    new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: 'A6A6A6', space: 4 } }, spacing: { after: 120 }, children: [] }),
   ] });
+  const ftr = new Footer({ children: [Pa([T(ref, { size: 16 }), new TextRun({ children: [new Tab(), 'Page ', PageNumber.CURRENT, '/', PageNumber.TOTAL_PAGES], font: F_B, size: 16 })], { tab: true })] });
   const blob = await Packer.toBlob(new Document({
     styles: { default: { document: { run: { font: F_B } } } },
-    sections: [{ properties: PG, children: cover }, { properties: PG, headers: { default: hdr }, children }],
+    sections: [{ properties: PG1, children: cover }, { properties: PG2, headers: { default: hdr }, footers: { default: ftr }, children }],
   }));
   const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url; link.download = `Rapport_${a.chantier.replace(/[^a-zA-Z0-9]/g,'_')}_${a.date}.docx`;
+  link.href = url; link.download = ref.replace(/[\\/:*?"<>|]/g, '-') + '.docx';
   link.click();
   URL.revokeObjectURL(url);
   toast('Document Word téléchargé.', 3500);
