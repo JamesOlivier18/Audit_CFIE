@@ -22,7 +22,7 @@ const CONFIG = {
 
   // ── Cartouche et rapport Word ──
   EMETTEUR: 'AREP - BET Environnement',            // case « Émetteur »
-  AUTEUR: 'Olivier JAMES',                         // case « Établi par »
+  AUTEUR: 'Olivier JAMES - Coordinateur Chantier Faible Impact Environnemental – 06 22 93 08 94',                         // case « Établi par »
   DOC_TITLE: 'Compte rendu de visite chantier faible impact environnemental',
   VISIT_PREFIX: 'VIS',                             // « VIS » + n° de visite saisi dans l'appli → VIS01
   INDICE: 'A',                                     // indice du document
@@ -40,6 +40,7 @@ const CONFIG = {
     { nom: 'ENCORE HEUREUX ARCHITECTES', adresse: "104 rue d'Aubervilliers - 75018 PARIS" },
     { nom: 'AREP Ingénierie - Architecture Recherche Engagement Post-carbone', adresse: "16 avenue d'Ivry - 75013 PARIS" },
     { nom: 'ECO+ CONSTRUIRE', adresse: '24 rue de Constantinople - 75008 PARIS' },
+    { nom: 'METHODE ET PILOTAGE', adresse: '5 rue de Logelbach - 75017 Paris' },
     { nom: 'REMIX', adresse: "104 rue d'Aubervilliers - 75019 PARIS" },
   ],
 
