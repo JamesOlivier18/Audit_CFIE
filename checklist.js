@@ -13,6 +13,13 @@
 // ════════════════════════════════════════════════════════════════
 
 const CONFIG = {
+  // ── Valeurs préremplies à la création d'une visite (restent modifiables dans l'appli) ──
+  DEFAULTS: {
+    chantier: "Pavillons d'Austerlitz les Amarres",
+    adresse: "24 -26 Quai d'Austerlitz 75013 PARIS",
+    auditeur: 'Olivier JAMES',
+  },
+
   // ── Cartouche et rapport Word ──
   EMETTEUR: 'AREP - BET Environnement',            // case « Émetteur »
   AUTEUR: 'Olivier JAMES',                         // case « Établi par »
@@ -21,7 +28,7 @@ const CONFIG = {
   INDICE: 'A',                                     // indice du document
   FILE_PREFIX: 'AREP-ENV-CFIE',                    // nom du fichier : PREFIX-VIS01-A-SUFFIX.docx
   FILE_SUFFIX: 'CR Visite Chantier Faible Impact',
-  FONT_TITLE: 'Lora',                              // titres (police à installer sur le poste qui ouvre le Word)
+  FONT_TITLE: 'Lato',                              // titres (police à installer sur le poste qui ouvre le Word)
   FONT_BODY: 'Lato',                               // corps de texte
   ACCENT: '#000000',                               // couleur des bandeaux de catégorie dans le Word
 
@@ -35,10 +42,6 @@ const CONFIG = {
     { nom: 'ECO+ CONSTRUIRE', adresse: '24 rue de Constantinople - 75008 PARIS' },
     { nom: 'REMIX', adresse: "104 rue d'Aubervilliers - 75019 PARIS" },
   ],
-
-  // ── Travaux en cours (pastilles à cocher à la création d'une visite) ──
-  TRAVAUX: ['Installation de chantier', 'Démolition / curage', 'Terrassement', 'Gros œuvre',
-            'Second œuvre', 'VRD', 'Espaces verts'],
 
   // ── Rappels de pénalité proposés quand un point est « Non conforme » ──
   PENALITES: {
@@ -56,11 +59,13 @@ const CONFIG = {
 const CATS = [
   { id: 'comext', label: 'Communication externe', abbr: 'CE', color: '#546e7a', items: [
     { id: '01', t: 'Présence de dispositifs de communication riverains', sub: 'Panneaux avec contact, boîte aux lettres, etc.', pen: '500_infraction' },
+    { id: '02', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'comint', label: 'Communication interne', abbr: 'CI', color: '#1565c0', items: [
     { id: '01', t: 'Signalétique en base-vie indiquant les pratiques de réduction des consommations et de tri des déchets', sub: "Extinction de l'éclairage, fermeture des portes si locaux chauffés, modération des températures de chauffe, extinction des radiateurs le soir, etc.", pen: '500_infraction' },
     { id: '02', t: "Signalétique chantier indiquant les zones de tri des déchets, l'aire de lavage et les kits anti-pollution", pen: '500_infraction' },
     { id: '03', t: "Livret d'accueil complet et mis à disposition du personnel", sub: "Informations générales sur le chantier et l'accessibilité, rappel des objectifs CCFN, PIC simplifié et fonctionnel, bonnes pratiques pour la réduction des impacts environnementaux, des pollutions et des nuisances, etc. Contrôle des bordereaux (signés lors de la réunion d'accueil HSE)", pen: '500_infraction' },
+    { id: '04', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'dechets', label: 'Gestion des déchets', abbr: 'DE', color: '#4e342e', items: [
     { id: '01', t: 'Propreté générale de la zone de tri des déchets', pen: '250_infraction' },
@@ -74,13 +79,19 @@ const CATS = [
     { id: '09', t: 'Tri à la source des déchets selon 8 flux : métal', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '11', t: 'Tri à la source des déchets selon 8 flux : textile', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '10', t: 'Déchets de la base-vie : tri des déchets alimentaires, du verre et des emballages', sub: 'Contenant adapté, signalétique, respect du tri, etc.', pen: '500_infraction' },
+    { id: '12', t: 'Zones de stockage temporaire de déchets', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
+    { id: '13', t: 'Benne à déchets dangereux', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
+    { id: '14', t: 'Benne DIB / tout-venant', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
+    { id: '15', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'inond', label: 'Gestion du risque inondation', abbr: 'IN', color: '#0277bd', items: [
     { id: '01', t: 'Cohérence des procédures de crue mises en place avec le plan de gestion', sub: 'Voir les procédures du plan de gestion de crue', pen: '500_infraction' },
     { id: '02', t: "Absence de stockage nocturne ou weekend des déchets amiantés et plombés en zone d'emport du Rez de Seine", sub: 'Stockage non autorisé', pen: '500_infraction' },
+    { id: '03', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'acou', label: 'Nuisances acoustiques', abbr: 'AC', color: '#6a1b9a', items: [
     { id: '01', t: 'Marquage CE et puissance acoustique associée sur les engins', sub: 'Présent, visible', pen: '500_infraction' },
+    { id: '02', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'boues', label: 'Nuisances boues et poussières', abbr: 'BP', color: '#e65100', items: [
     { id: '01', t: 'Points de lavage pour les roues des camions et pour les goulottes de toupies', sub: 'Lavage adapté (système de décantation et rétention des eaux souillées, etc.)', pen: '250_infraction' },
@@ -88,10 +99,13 @@ const CATS = [
     { id: '03', t: "Aspiration à la source en cas d'opérations de sciage ou de ponçage", sub: "En cas d'opération très émettrice de poussières", pen: '250_infraction' },
     { id: '04', t: 'Bâches pour le transport des produits pouvant se disperser', pen: '250_infraction' },
     { id: '05', t: 'Lave-bottes, gratte-boues et paillassons en place dans la base-vie', pen: '250_infraction' },
+    { id: '06', t: 'Autre remarque', pen: '250_infraction' },
   ]},
   { id: 'visuel', label: 'Nuisances visuelles', abbr: 'VI', color: '#00838f', items: [
     { id: '01', t: 'Présence de barrières ou de palissades permettant de limiter les nuisances visuelles', sub: "Le type de barrière (pleine, grillagée), voire la protection visuelle (bâche en trompe-l'œil) lorsque nécessaire, est adéquat", pen: '250_infraction' },
-    { id: '02', t: 'Bon état / nettoyage des palissades, des abords, de la voie publique, etc.', pen: '250_infraction' },
+    { id: '02', t: 'État / nettoyage / aspect général des palissades, des abords, de la voie publique, etc.', pen: '250_infraction' },
+    { id: '03', t: "État / nettoyage / aspect général dans l'emprise du chantier", pen: '250_infraction' },
+    { id: '04', t: 'Autre remarque', pen: '250_infraction' },
   ]},
   { id: 'eau', label: 'Pollution eau et sol', abbr: 'PE', color: '#2e7d32', items: [
     { id: '01', t: "Présence d'un dispositif de drainage et de filtration des eaux de ruissellement avant rejet", sub: 'Drainage de type périphérique par tranchée reliée à un puisard ou équivalent', pen: '500_infraction' },
@@ -102,8 +116,14 @@ const CATS = [
     { id: '06', t: 'Liquides dangereux placés dans des conteneurs étanches sur des bacs de rétention', sub: 'État, conteneur fermé, étiqueté, étanche, etc.', pen: '500_infraction' },
     { id: '07', t: 'Zéro rejet polluant vers la Seine', sub: 'Pas de laitance, hydrocarbures, solvants, eaux chargées de sédiments etc.', pen: '500_infraction' },
     { id: '08', t: 'Disponibilité de kits anti-pollution', sub: 'Disponibilité, localisations pertinentes (près des sources : réserves carburant, sur engins etc.), état, nombre, typologies (absorption (ex. boudins), confinement (barrages, bâches étanches pour sol, etc.), récupération (pelles, racloirs, fûts, sacs))', pen: '500_infraction' },
+    { id: '09', t: 'Autre remarque', pen: '500_infraction' },
+  ]},
+  { id: 'bio', label: 'Biodiversité', abbr: 'BI', color: '#9e9d24', items: [
+    { id: '01', t: 'Protection des arbres' },
+    { id: '02', t: 'Autre remarque' },
   ]},
   { id: 'fds', label: 'Pollutions : prescriptions générales', abbr: 'PG', color: '#c62828', items: [
     { id: '01', t: 'Respect des prescriptions indiquées sur les FDS', sub: 'Voir prescriptions indiquées dans les FDS', pen: '500_infraction' },
+    { id: '02', t: 'Autre remarque', pen: '500_infraction' },
   ]},
 ];
