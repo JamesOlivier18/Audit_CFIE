@@ -10,7 +10,7 @@ Adaptée de l'outil [Audits_Environnementaux](https://github.com/LouisArep/Audit
 
 ## Fonctionnalités
 
-- Checklist structurée en 9 catégories : Communication externe, Communication interne, Gestion des déchets, Gestion du risque inondation, Nuisances acoustiques, Nuisances boues et poussières, Nuisances visuelles, Pollution eau et sol, Pollutions : prescriptions générales (34 points de contrôle « sur site »)
+- Checklist structurée en 10 catégories : Communication externe, Communication interne, Gestion des déchets, Gestion du risque inondation, Nuisances acoustiques, Nuisances boues et poussières, Nuisances visuelles, Pollution eau et sol, Biodiversité, Pollutions : prescriptions générales (39 points de contrôle, plus un point « Autre remarque » par catégorie)
 - 5 statuts par point : Conforme, À améliorer, Non conforme, Non vérifié, Non concerné
 - Photos depuis l'appareil photo ou la galerie, associées à chaque point
 - Champ de remarques et choix de l'entreprise responsable par point
@@ -39,7 +39,7 @@ Adaptée de l'outil [Audits_Environnementaux](https://github.com/LouisArep/Audit
 
 Au premier lancement, choisir un dossier de travail sur l'appareil (ex. `Documents/Suivi_Chantier`) : les visites et les photos y sont enregistrées. À chaque réouverture, le navigateur demande de confirmer l'accès au même dossier.
 
-Créer ensuite une visite : nom du chantier (titre de la page de garde), adresse, n° de visite (saisir `1` donne `VIS01`), date, auditeur, météo, travaux en cours. Ces informations alimentent la page de garde et l'en-tête du Word.
+Créer ensuite une visite : nom du chantier (titre de la page de garde), adresse, n° de visite (saisir `1` donne `VIS01`), date, auditeur. Le nom du chantier, l'adresse et l'auditeur sont préremplis (valeurs modifiables dans `CONFIG.DEFAULTS`) et restent modifiables à chaque visite. Ces informations alimentent la page de garde et l'en-tête du Word.
 
 ---
 
@@ -53,7 +53,7 @@ Tout le contenu est dans le fichier **`checklist.js`** ; `index.html` n'a pas be
 | Ajouter une catégorie | un nouveau bloc `{ id, label, abbr, color, items }` dans `CATS` |
 | Changer l'émetteur, l'auteur (« Établi par »), le titre du document, l'indice, le nom du fichier, les polices, les acteurs MOA / MOE de la page de garde | le bloc `CONFIG` en haut du fichier |
 | Modifier les phrases de rappel de pénalité (montants) | `CONFIG.PENALITES` ; chaque point y renvoie via `pen: '500_infraction'` |
-| Changer les pastilles « Travaux en cours » | `CONFIG.TRAVAUX` |
+| Changer les valeurs préremplies à la création d'une visite | `CONFIG.DEFAULTS` |
 
 **À respecter :** chaque point a un `id` unique dans sa catégorie. Ne jamais renuméroter ni réutiliser l'`id` d'un point supprimé, sinon les visites déjà saisies seraient décalées. Pour un nouveau point, prendre l'`id` suivant.
 
@@ -64,7 +64,7 @@ Sur GitHub : ouvrir `checklist.js` > icône crayon > modifier > « Commit change
 ## Export du compte-rendu
 
 ### Word (.docx)
-Généré directement et téléchargé sur l'appareil. Il contient une page de garde au format cartouche AREP (émetteur, n° de document `VIS01`, indice, MOA / MOE), un en-tête avec logo et un pied de page « référence / Page X/Y » sur chaque page, puis les points renseignés par catégorie avec statuts, remarques et photos (compressées automatiquement). Le fichier s'appelle par exemple `AREP-ENV-CFIE-VIS01-A-CR Visite Chantier Faible Impact.docx`. Les polices `Lora` (titres) et `Lato` (corps) doivent être installées sur le poste qui ouvre le fichier, sinon Word les remplace : voir `CONFIG` pour choisir d'autres polices.
+Généré directement et téléchargé sur l'appareil. Il contient une page de garde au format cartouche AREP (émetteur, n° de document `VIS01`, indice, MOA / MOE), un en-tête avec logo et un pied de page « référence / Page X/Y » sur chaque page, puis les points renseignés par catégorie avec statuts, remarques, rappels de pénalité éventuels et photos (compressées automatiquement). Le fichier s'appelle par exemple `AREP-ENV-CFIE-VIS01-A-CR Visite Chantier Faible Impact.docx`. La police `Lato` doivent être installées sur le poste qui ouvre le fichier, sinon Word les remplace : voir `CONFIG` pour choisir d'autres polices.
 L'export nécessite internet au premier usage (chargement de la librairie docx.js).
 
 ### HTML (avec photos)
