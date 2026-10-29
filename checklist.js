@@ -79,15 +79,15 @@ const CATS = [
     { id: '08', t: 'Tri à la source des déchets selon 8 flux : plâtre', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '09', t: 'Tri à la source des déchets selon 8 flux : métal', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '11', t: 'Tri à la source des déchets selon 8 flux : textile', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
-    { id: '10', t: 'Déchets de la base-vie : tri des déchets alimentaires, du verre et des emballages', sub: 'Contenant adapté, signalétique, respect du tri, etc.', pen: '500_infraction' },
+    { id: '10', t: 'Déchets de la base-vie : tri des déchets recyclables et non recyclables', sub: 'Contenant adapté, signalétique, respect du tri des déchets alimentaires, du verre et des emballages, etc.', pen: '500_infraction' },
     { id: '12', t: 'Zones de stockage temporaire de déchets', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '13', t: 'Benne à déchets dangereux', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '14', t: 'Benne DIB / tout-venant', sub: 'Contenant adapté, signalétique, accès, absence de surcharge, respect du tri, etc.', pen: '500_infraction' },
     { id: '15', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'inond', label: 'Gestion du risque inondation', abbr: 'IN', color: '#0277bd', items: [
-    { id: '01', t: 'Cohérence des procédures de crue mises en place avec le plan de gestion', sub: 'Voir les procédures du plan de gestion de crue', pen: '500_infraction' },
-    { id: '02', t: "Absence de stockage nocturne ou weekend des déchets amiantés et plombés en zone d'emport du Rez de Seine", sub: 'Stockage non autorisé', pen: '500_infraction' },
+    { id: '01', t: 'Cohérence des procédures de crue mises en place avec le plan de gestion', sub: 'Voir les procédures du plan de gestion de crue. Les entreprises sont-elles informées du niveau actuel de Vigicrues ?', pen: '500_infraction' },
+    { id: '02', t: "Stockage, matériel, gravats, déchets adaptés au niveaux Vigicrues', sub: 'Si niveau jaune : absence de stockage de DECHETS nocturne ou weekend en zone d'emport du Rez de Seine. Evacuation au RDC prévue. Si niveau orange : emprises libérées de tout stockage, matériel, gravats ou déchets sous 48 h', pen: '500_infraction' },
     { id: '03', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'acou', label: 'Nuisances acoustiques', abbr: 'AC', color: '#6a1b9a', items: [
