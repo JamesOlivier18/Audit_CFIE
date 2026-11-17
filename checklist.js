@@ -87,7 +87,7 @@ const CATS = [
   ]},
   { id: 'inond', label: 'Gestion du risque inondation', abbr: 'IN', color: '#0277bd', items: [
     { id: '01', t: 'Cohérence des procédures de crue mises en place avec le plan de gestion', sub: 'Voir les procédures du plan de gestion de crue. Les entreprises sont-elles informées du niveau actuel de Vigicrues ?', pen: '500_infraction' },
-    { id: '02', t: "Stockage, matériel, gravats, déchets adaptés au niveaux Vigicrues', sub: 'Si niveau jaune : absence de stockage de DECHETS nocturne ou weekend en zone d'emport du Rez de Seine. Evacuation au RDC prévue. Si niveau orange : emprises libérées de tout stockage, matériel, gravats ou déchets sous 48 h', pen: '500_infraction' },
+    { id: '02', t: 'Stockage, matériel, gravats, déchets adaptés au niveaux Vigicrues', sub: "Si niveau jaune : absence de stockage de DECHETS nocturne ou weekend en zone d'emport du Rez de Seine. Evacuation au RDC prévue. Si niveau orange : emprises libérées de tout stockage, matériel, gravats ou déchets sous 48 h", pen: '500_infraction' },
     { id: '03', t: 'Autre remarque', pen: '500_infraction' },
   ]},
   { id: 'acou', label: 'Nuisances acoustiques', abbr: 'AC', color: '#6a1b9a', items: [
