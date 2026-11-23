@@ -14,6 +14,7 @@ Adaptée de l'outil [Audits_Environnementaux](https://github.com/LouisArep/Audit
 - 5 statuts par point : Conforme, À améliorer, Non conforme, Non vérifié, Non concerné
 - Photos depuis l'appareil photo ou la galerie, associées à chaque point
 - Champ de remarques et choix de l'entreprise responsable par point
+- Champ **Créé le** sous chaque remarque : par défaut la date de la visite (observation du présent CR) ; une autre date indique une observation d'un CR précédent, toujours pas corrigée
 - Pour les points « Non conforme » : vignettes **Rappel pénalité 1** / **Rappel pénalité 2** (ou aucune) ; la phrase correspondante est ajoutée au compte-rendu Word
 - Récapitulatif de visite avec avancement par catégorie
 - Export du compte-rendu en **Word (.docx)** (page de garde, en-tête avec n° de visite, date, semaine et pagination) et en **HTML** (avec photos intégrées)
@@ -43,6 +44,17 @@ Créer ensuite une visite : nom du chantier (titre de la page de garde), adresse
 
 ---
 
+## Observations du présent CR et des CR précédents
+
+Chaque point a un champ **Créé le**, sous les remarques :
+
+- **date de la visite (par défaut)** : observation du présent CR, exportée en **bleu** ;
+- **autre date** (celle d'un CR précédent) : la remarque et la date sont exportées en **noir**.
+
+L'application affiche « CR actuel : exporté en bleu » ou « CR précédent : exporté en noir » sous le champ. Remettre la date de la visite rétablit la valeur par défaut. Les points déjà saisis, sans date propre, suivent la date de leur visite (donc bleu).
+
+---
+
 ## Modifier les catégories et les checklists
 
 Tout le contenu est dans le fichier **`checklist.js`** ; `index.html` n'a pas besoin d'être touché. Les images du Word (logo, image de couverture) sont dans **`assets.js`**.
@@ -64,7 +76,7 @@ Sur GitHub : ouvrir `checklist.js` > icône crayon > modifier > « Commit change
 ## Export du compte-rendu
 
 ### Word (.docx)
-Généré directement et téléchargé sur l'appareil. Il contient une page de garde au format cartouche AREP (émetteur, n° de document `VIS01`, indice, MOA / MOE), un en-tête avec logo et un pied de page « référence / Page X/Y » sur chaque page, puis les points renseignés par catégorie avec statuts, remarques, rappels de pénalité éventuels et photos (compressées automatiquement). Le fichier s'appelle par exemple `AREP-ENV-CFIE-VIS01-A-CR Visite Chantier Faible Impact.docx`. La police `Lato` doivent être installées sur le poste qui ouvre le fichier, sinon Word les remplace : voir `CONFIG` pour choisir d'autres polices.
+Généré directement et téléchargé sur l'appareil. Il contient une page de garde au format cartouche AREP (émetteur, n° de document `VIS01`, indice, MOA / MOE), un en-tête avec logo et un pied de page « référence / Page X/Y » sur chaque page, puis une légende (« Noir : observations intégrées dans CR précédents. Bleu : observations intégrées dans le présent CR. ») et les points renseignés par catégorie, dans un tableau à trois colonnes : **point / statut / remarques**, **Créé le** et **Photos** (colonne ajustée à la largeur de la plus large photo de la rubrique). Les rappels de pénalité éventuels et les photos (compressées automatiquement) y figurent. Le fichier s'appelle par exemple `AREP-ENV-CFIE-VIS01-A-CR Visite Chantier Faible Impact.docx`. La police `Lato` doit être installée sur le poste qui ouvre le fichier, sinon Word la remplace : voir `CONFIG` pour choisir une autre police. Les couleurs bleu / noir peuvent être changées en ajoutant `COULEUR_NOUVEAU: '#0070C0'` et `COULEUR_ANCIEN: '#000000'` dans `CONFIG` (valeurs par défaut sinon).
 L'export nécessite internet au premier usage (chargement de la librairie docx.js).
 
 ### HTML (avec photos)
