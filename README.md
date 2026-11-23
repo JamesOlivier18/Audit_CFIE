@@ -11,10 +11,12 @@ Adaptée de l'outil [Audits_Environnementaux](https://github.com/LouisArep/Audit
 ## Fonctionnalités
 
 - Checklist structurée en 10 catégories : Communication externe, Communication interne, Gestion des déchets, Gestion du risque inondation, Nuisances acoustiques, Nuisances boues et poussières, Nuisances visuelles, Pollution eau et sol, Biodiversité, Pollutions : prescriptions générales (39 points de contrôle, plus un point « Autre remarque » par catégorie)
-- 5 statuts par point : Conforme, À améliorer, Non conforme, Non vérifié, Non concerné
+- 5 statuts : Conforme, À améliorer, Non conforme, Non vérifié, Non concerné ; le statut est choisi **pour chaque remarque** (un point peut avoir une remarque Conforme et une autre À améliorer)
 - Photos depuis l'appareil photo ou la galerie, associées à chaque point
 - Choix de l'entreprise responsable par point
-- **Plusieurs remarques par point**, chacune avec son propre champ **Créé le** : par défaut la date de la visite (observation du présent CR) ; une autre date indique une observation d'un CR précédent, toujours pas corrigée. Le statut (Conforme, Non conforme…) et le rappel de pénalité restent uniques par point
+- **Plusieurs remarques par point**, chacune avec son propre statut et son propre champ **Créé le** : par défaut la date de la visite (observation du présent CR) ; une autre date indique une observation d'un CR précédent, toujours pas corrigée
+- Bouton **Marquer urgent** sur chaque remarque : exportée en **rouge** dans le Word, et reprise dans l'encadré rouge du récapitulatif
+- L'avancement et les compteurs (non conformes, à améliorer) utilisent, pour chaque point, le statut le plus défavorable de ses remarques
 - Rappels de pénalité (vignettes **Rappel pénalité 1** / **2** sur les points « Non conforme ») : fonction **désactivée pour le moment** ; pour la réactiver, ajouter `PENALITES_ACTIVES: true` dans `CONFIG` (`checklist.js`)
 - Récapitulatif de visite avec avancement par catégorie
 - Export du compte-rendu en **Word (.docx)** (page de garde, en-tête avec n° de visite, date, semaine et pagination) et en **HTML** (avec photos intégrées)
@@ -46,12 +48,16 @@ Créer ensuite une visite : nom du chantier (titre de la page de garde), adresse
 
 ## Observations du présent CR et des CR précédents
 
-Chaque remarque d'un point (bouton **+ Ajouter une remarque**) a son champ **Créé le** :
+Chaque remarque d'un point (bouton **+ Ajouter une remarque**) a son statut et son champ **Créé le** :
 
 - **date de la visite (par défaut)** : observation du présent CR, exportée en **bleu** ;
-- **autre date** (celle d'un CR précédent) : la remarque et la date sont exportées en **noir**.
+- **autre date** (celle d'un CR précédent) : la remarque et la date sont exportées en **noir** ;
+- **remarque urgente** : exportée en **rouge** (remarque et date), quelle que soit la date.
 
-L'application affiche « CR actuel : exporté en bleu » ou « CR précédent : exporté en noir » sous le champ. Remettre la date de la visite rétablit la valeur par défaut. Le bouton **Supprimer** retire une remarque. Les visites déjà saisies restent lisibles : l'ancienne remarque unique d'un point (et sa date) devient la première remarque.
+L'application affiche « CR actuel : exporté en bleu », « CR précédent : exporté en noir » ou « URGENT : exporté en rouge » sous le champ. Remettre la date de la visite rétablit la valeur par défaut. Le bouton **Supprimer** retire une remarque. Les visites déjà saisies restent lisibles : l'ancienne remarque unique d'un point (avec sa date et son statut) devient la première remarque ; le statut d'un point sans remarque est conservé.
+
+### Synthèse des remarques urgentes
+Le récapitulatif contient un encadré rouge qui liste les remarques urgentes, une par ligne, au format : `Catégorie : Remarque. (remarque créée le AAAA-MM-JJ).` Le bouton **Copier** place la liste (à puces) dans le presse-papiers, prête à coller dans un mail.
 
 ---
 
@@ -76,7 +82,7 @@ Sur GitHub : ouvrir `checklist.js` > icône crayon > modifier > « Commit change
 ## Export du compte-rendu
 
 ### Word (.docx)
-Généré directement et téléchargé sur l'appareil. Il contient une page de garde au format cartouche AREP (émetteur, n° de document `VIS01`, indice, MOA / MOE), un en-tête avec logo et un pied de page « référence / Page X/Y » sur chaque page, puis une légende (« Noir : observations intégrées dans CR précédents. Bleu : observations intégrées dans le présent CR. ») et les points renseignés par catégorie, dans un tableau à trois colonnes : **point / statut / remarques**, **Créé le** et **Photos** (colonne ajustée à la largeur de la plus large photo de la rubrique). Pour chaque point, une première ligne sur toute la largeur porte le titre, le statut et les entreprises ; en dessous, chaque remarque occupe sa ligne avec sa date en face, et les photos du point se suivent dans la colonne de droite. Les séparateurs internes entre remarques et dates sont en gris très clair. Les photos (compressées automatiquement) y figurent. Le fichier s'appelle par exemple `AREP-ENV-CFIE-VIS01-A-CR Visite Chantier Faible Impact.docx`. La police `Lato` doit être installée sur le poste qui ouvre le fichier, sinon Word la remplace : voir `CONFIG` pour choisir une autre police. Les couleurs bleu / noir peuvent être changées en ajoutant `COULEUR_NOUVEAU: '#0070C0'` et `COULEUR_ANCIEN: '#000000'` dans `CONFIG` (valeurs par défaut sinon).
+Généré directement et téléchargé sur l'appareil. Il contient une page de garde au format cartouche AREP (émetteur, n° de document `VIS01`, indice, MOA / MOE), un en-tête avec logo et un pied de page « référence / Page X/Y » sur chaque page, puis une légende (« Noir : observations intégrées dans CR précédents. Bleu : observations intégrées dans le présent CR. Rouge : observations à prendre en compte urgemment. ») et les points renseignés par catégorie, dans un tableau par catégorie. Pour chaque point, une ligne grisée sur toute la largeur porte le titre et les entreprises ; en dessous, chaque remarque occupe sa ligne avec, en colonnes, son **statut** (cellule colorée) et sa date **Créé le**, et les photos du point se suivent dans la colonne de droite. Cette colonne **Photos** a toujours au moins la largeur d'une photo portrait, même sans photo, et s'élargit pour les photos paysage. Les séparateurs internes sont en gris très clair. Les photos sont compressées automatiquement. Le fichier s'appelle par exemple `AREP-ENV-CFIE-VIS01-A-CR Visite Chantier Faible Impact.docx`. La police `Lato` doit être installée sur le poste qui ouvre le fichier, sinon Word la remplace : voir `CONFIG` pour choisir une autre police. Les couleurs bleu / noir peuvent être changées en ajoutant `COULEUR_NOUVEAU: '#0070C0'` et `COULEUR_ANCIEN: '#000000'` dans `CONFIG` (valeurs par défaut sinon).
 L'export nécessite internet au premier usage (chargement de la librairie docx.js).
 
 ### HTML (avec photos)
