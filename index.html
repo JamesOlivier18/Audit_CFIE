@@ -625,7 +625,7 @@ function renderItems() {
 
     // Rappels de pénalité (Non conforme uniquement) : 1, 2 ou aucun
     const pen = CONFIG.PENALITES[item.pen];
-    if (data.status === 'NC' && pen) {
+    if (CONFIG.PENALITES_ACTIVES && data.status === 'NC' && pen) {
       const penRow = document.createElement('div');
       penRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px';
       [['p1', 'Rappel pénalité 1'], ['p2', 'Rappel pénalité 2']].forEach(([v, l]) => {
@@ -959,9 +959,10 @@ async function exportWord() {
   }
 
   const NO_B  = { style: BorderStyle.NONE, size: 0 };
-  const NOOP  = { top: NO_B, bottom: NO_B, left: NO_B, right: NO_B };
+  const NOOP  = { top: NO_B, bottom: NO_B, left: NO_B, right: NO_B, insideHorizontal: NO_B, insideVertical: NO_B };
   const THIN  = { style: BorderStyle.SINGLE, size: 4, color: 'DDE3E5' };
-  const CELL  = { top: THIN, bottom: THIN, left: THIN, right: THIN };
+  const CELL  = { top: THIN, bottom: THIN, left: THIN, right: THIN, insideHorizontal: THIN, insideVertical: THIN };
+  const SOFT  = { style: BorderStyle.SINGLE, size: 4, color: 'E9EDEF' };   // séparateurs internes (remarques / dates), plus clairs que le cadre
   const ll    = { C:'Conforme', NC:'Non conforme', AM:'À améliorer', NV:'Non vérifié', NN:'Non concerné' };
   const badgeBg = { C:'E6F4EA', NC:'FDECEA', AM:'FFF4E0', NV:'F5F7F8', NN:'F5F7F8' };
   const badgeFg = { C:'1E6E35', NC:'B71C1C', AM:'B85C00', NV:'546E7A', NN:'78909C' };
@@ -975,7 +976,7 @@ async function exportWord() {
         shading: { type: ShadingType.SOLID, color: badgeBg[status] },
         borders: NOOP,
         margins: { top: 60, bottom: 60, left: 120, right: 120 },
-        children: [new Paragraph({ alignment: AlignmentType.CENTER,
+        children: [new Paragraph({ alignment: AlignmentType.CENTER, keepNext: true,
           children: [new TextRun({ text: ll[status], bold: true, size: 18, color: badgeFg[status] })] })]
       })]})],
     });
@@ -1067,45 +1068,49 @@ async function exportWord() {
       });
       const rems = getRemarks(data).filter(r => (r.text || '').trim());
 
-      // Bloc « point examiné » : titre, statut, pénalité, entreprises
+      // Ligne 1 (pleine largeur) : titre, statut, entreprises
+      const KN = { keepNext: true };
       const titleBlock = [
-        new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
+        new Paragraph({ ...KN, spacing: { after: 60 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
         makeBadge(data.status),
-        ...((data.status === 'NC' && data.pen && CONFIG.PENALITES[item.pen]?.[data.pen]) ? [new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: CONFIG.PENALITES[item.pen][data.pen], bold: true, size: 18, color: 'B71C1C' })] })] : []),
-        ...entreprises.map(e => new Paragraph({
+        ...((CONFIG.PENALITES_ACTIVES && data.status === 'NC' && data.pen && CONFIG.PENALITES[item.pen]?.[data.pen]) ? [new Paragraph({ ...KN, spacing: { before: 80 }, children: [new TextRun({ text: CONFIG.PENALITES[item.pen][data.pen], bold: true, size: 18, color: 'B71C1C' })] })] : []),
+        ...entreprises.map(e => new Paragraph({ ...KN,
           spacing: { before: 60, after: 0 },
           children: [new TextRun({ text: '▌ ' + e.name, bold: true, size: 18, color: e.color })]
         })),
       ];
+      tableRows.push(new TableRow({ cantSplit: true, children: [
+        new TableCell({ width: { size: LEFT_W + DATE_W + PHOTO_W, type: DXA }, columnSpan: 3, borders: CELL,
+          margins: { top: 100, bottom: 100, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP, children: titleBlock }),
+      ]}));
 
-      // Tableau imbriqué : une ligne par remarque, la date « Créé le » en face de sa remarque
-      const NB = { top: NO_B, bottom: NO_B, left: NO_B, right: NO_B };
-      const nestedRows = [new TableRow({ cantSplit: true, children: [new TableCell({
-        width: { size: LEFT_W + DATE_W, type: DXA }, columnSpan: 2, borders: NB,
-        margins: { top: 100, bottom: 100, left: 140, right: 140 }, children: titleBlock })] })];
-      let leftCm = 1.6 + entreprises.length * 0.5 + (data.status ? 0.8 : 0);
-      for (const r of rems) {
+      // Ligne 2 : une ligne par remarque (date en face) à gauche, photos du point à droite
+      if (!rems.length && !photosCm) continue;
+      let leftCm = 0;
+      const nestedRows = rems.map((r, ri) => {
         // Date vide ou égale à celle de l'audit = présent CR (bleu) ; autre date = CR précédent (noir, remarque et date)
         const isNew = !r.created || r.created === a.date;
         const col   = isNew ? BLUE : BLACK;
         const lines = String(r.text).split(/\r?\n/);
         leftCm += lines.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 60)) * 0.5, 0) + 0.4;
-        nestedRows.push(new TableRow({ cantSplit: true, children: [
-          new TableCell({ width: { size: LEFT_W, type: DXA }, borders: { top: THIN, bottom: NO_B, left: NO_B, right: NO_B },
+        return new TableRow({ cantSplit: true, children: [
+          new TableCell({ width: { size: LEFT_W, type: DXA }, borders: { top: ri ? SOFT : NO_B, bottom: NO_B, left: NO_B, right: NO_B },
             margins: { top: 80, bottom: 80, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP,
             children: [new Paragraph({ children: lines.map((l, li) => new TextRun({ text: l, size: 20, color: col, break: li ? 1 : 0 })) })] }),
-          new TableCell({ width: { size: DATE_W, type: DXA }, borders: { top: THIN, bottom: NO_B, left: THIN, right: NO_B },
+          new TableCell({ width: { size: DATE_W, type: DXA }, borders: { top: ri ? SOFT : NO_B, bottom: NO_B, left: SOFT, right: NO_B },
             margins: { top: 80, bottom: 80, left: 100, right: 60 }, verticalAlign: VerticalAlign.TOP,
             children: [new Paragraph({ children: [new TextRun({ text: r.created || a.date, size: 18, color: col })] })] }),
-        ] }));
-      }
-      const nested = new Table({ width: { size: LEFT_W + DATE_W, type: DXA }, columnWidths: [LEFT_W, DATE_W],
-        layout: TableLayoutType.FIXED, borders: NB, rows: nestedRows });
+        ] });
+      });
+      const leftChildren = nestedRows.length
+        ? [new Table({ width: { size: LEFT_W + DATE_W, type: DXA }, columnWidths: [LEFT_W, DATE_W],
+            layout: TableLayoutType.FIXED, borders: NOOP, rows: nestedRows }),
+           new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [new TextRun({ text: '', size: 2 })] })]
+        : [new Paragraph({ text: '' })];
 
       tableRows.push(new TableRow({ cantSplit: photosCm <= 9.5 && leftCm <= 9.5, children: [
         new TableCell({ width: { size: LEFT_W + DATE_W, type: DXA }, columnSpan: 2, borders: CELL,
-          margins: { top: 0, bottom: 0, left: 0, right: 0 }, verticalAlign: VerticalAlign.TOP,
-          children: [nested, new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [new TextRun({ text: '', size: 2 })] })] }),
+          margins: { top: 0, bottom: 0, left: 0, right: 0 }, verticalAlign: VerticalAlign.TOP, children: leftChildren }),
         new TableCell({ width: { size: PHOTO_W, type: DXA }, borders: CELL,
           margins: { top: 100, bottom: 100, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: rightContent }),
       ]}));
