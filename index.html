@@ -479,10 +479,10 @@ function getStats(a) {
   let done = 0, total = 0, nc = 0, am = 0;
   CATS.forEach(c => c.items.forEach((_, i) => {
     total++;
-    const s = (a.items || {})[c.id + '_' + c.items[i].id];
-    if (s && s.status) done++;
-    if (s && s.status === 'NC') nc++;
-    if (s && s.status === 'AM') am++;
+    const ps = pointStatus((a.items || {})[c.id + '_' + c.items[i].id]);
+    if (ps) done++;
+    if (ps === 'NC') nc++;
+    if (ps === 'AM') am++;
   }));
   return { done, total, nc, am };
 }
@@ -490,9 +490,9 @@ function getCatStats(a, catId) {
   const cat = CATS.find(c => c.id === catId);
   let done = 0, nc = 0, am = 0, ok = 0;
   cat.items.forEach((_, i) => {
-    const s = (a.items || {})[catId + '_' + cat.items[i].id];
-    if (!s || !s.status) return;
-    done++; if (s.status==='NC') nc++; if (s.status==='AM') am++; if (s.status==='C') ok++;
+    const ps = pointStatus((a.items || {})[catId + '_' + cat.items[i].id]);
+    if (!ps) return;
+    done++; if (ps==='NC') nc++; if (ps==='AM') am++; if (ps==='C') ok++;
   });
   return { done, total: cat.items.length, nc, am, ok };
 }
@@ -611,21 +611,9 @@ function renderItems() {
       block.appendChild(sub);
     }
 
-    // Boutons statut
-    const statusRow = document.createElement('div');
-    statusRow.className = 'status-row';
-    STATUSES.forEach(s => {
-      const btn = document.createElement('button');
-      btn.className = 'status-btn' + (data.status === s.v ? ' s-' + s.v : '');
-      btn.textContent = s.l;
-      btn.onclick = () => setStatus(key, s.v);
-      statusRow.appendChild(btn);
-    });
-    block.appendChild(statusRow);
-
     // Rappels de pénalité (Non conforme uniquement) : 1, 2 ou aucun
     const pen = CONFIG.PENALITES[item.pen];
-    if (CONFIG.PENALITES_ACTIVES && data.status === 'NC' && pen) {
+    if (CONFIG.PENALITES_ACTIVES && pointStatus(data) === 'NC' && pen) {
       const penRow = document.createElement('div');
       penRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px';
       [['p1', 'Rappel pénalité 1'], ['p2', 'Rappel pénalité 2']].forEach(([v, l]) => {
@@ -662,10 +650,24 @@ function renderItems() {
     remarquesLabel.textContent = 'Remarques';
     block.appendChild(remarquesLabel);
     let rlist = getRemarks(data);
-    if (!rlist.length) rlist = [{ text: '', created: null }];
+    if (!rlist.length) rlist = [{ text: '', created: null, status: null, urgent: false }];
     rlist.forEach((rm, ri) => {
       const rbox = document.createElement('div');
-      rbox.style.cssText = 'border-left:3px solid #0070C0;padding-left:8px;margin-bottom:10px';
+      rbox.style.cssText = 'border-left:3px solid #0070C0;padding-left:8px;margin-bottom:12px';
+
+      // Statut propre à cette remarque
+      const statusRow = document.createElement('div');
+      statusRow.className = 'status-row';
+      statusRow.style.marginBottom = '6px';
+      STATUSES.forEach(s => {
+        const btn = document.createElement('button');
+        btn.className = 'status-btn' + (rm.status === s.v ? ' s-' + s.v : '');
+        btn.textContent = s.l;
+        btn.onclick = () => setStatus(key, ri, s.v);
+        statusRow.appendChild(btn);
+      });
+      rbox.appendChild(statusRow);
+
       const textarea = document.createElement('textarea');
       textarea.id = 'rm-' + key + '-' + ri;
       textarea.placeholder = 'Observations, constats...';
@@ -687,6 +689,7 @@ function renderItems() {
       dateHint.style.cssText = 'font-size:11px;font-weight:700';
       const showDateHint = () => {
         const old = dateInput.value && dateInput.value !== a.date;
+        if (rm.urgent) { dateHint.textContent = 'URGENT : exporté en rouge'; dateHint.style.color = '#D00000'; rbox.style.borderLeftColor = '#D00000'; return; }
         dateHint.textContent = old ? 'CR précédent : exporté en noir' : 'CR actuel : exporté en bleu';
         dateHint.style.color = old ? '#212121' : '#0070C0';
         rbox.style.borderLeftColor = old ? '#212121' : '#0070C0';
@@ -694,15 +697,25 @@ function renderItems() {
       dateInput.onchange = () => { setRemarkDate(key, ri, dateInput.value); showDateHint(); };
       showDateHint();
       dateRow.append(dateLabel, dateInput, dateHint);
-      if (rlist.length > 1 || (rm.text || '').trim()) {
+      rbox.appendChild(dateRow);
+
+      const actRow = document.createElement('div');
+      actRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px';
+      const urg = document.createElement('button');
+      urg.type = 'button';
+      urg.textContent = rm.urgent ? '⚠ Urgent (retirer)' : '⚠ Marquer urgent';
+      urg.style.cssText = 'border:2px solid #D00000;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;background:' + (rm.urgent ? '#D00000' : '#fff') + ';color:' + (rm.urgent ? '#fff' : '#D00000');
+      urg.onclick = () => toggleUrgent(key, ri);
+      actRow.appendChild(urg);
+      if (rlist.length > 1 || (rm.text || '').trim() || rm.status) {
         const del = document.createElement('button');
         del.type = 'button';
         del.textContent = 'Supprimer';
         del.style.cssText = 'margin-left:auto;background:#fff;border:1px solid #b71c1c;color:#b71c1c;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif';
         del.onclick = () => deleteRemark(key, ri);
-        dateRow.appendChild(del);
+        actRow.appendChild(del);
       }
-      rbox.appendChild(dateRow);
+      rbox.appendChild(actRow);
       block.appendChild(rbox);
     });
     const addRem = document.createElement('button');
@@ -752,14 +765,6 @@ async function loadThumb(key, pi, fn) {
   if (d && img) img.src = d;
 }
 
-async function setStatus(key, val) {
-  const a = audits[currentAudit];
-  if (!a.items[key]) a.items[key] = {};
-  a.items[key].status = a.items[key].status === val ? null : val;
-  await saveAudits();
-  renderItems();
-  renderCats();
-}
 async function setPen(key, val) {
   const a = audits[currentAudit];
   if (!a.items[key]) a.items[key] = {};
@@ -767,41 +772,68 @@ async function setPen(key, val) {
   await saveAudits();
   renderItems();
 }
-// Remarques d'un point : liste [{ text, created }] ; created = null → date de l'audit.
-// Les anciens audits (champs note + created) sont relus comme une remarque unique, sans rien perdre.
+// Remarques d'un point : liste [{ text, created, status, urgent }] ; created = null → date de l'audit.
+// Le statut est désormais propre à chaque remarque. Les anciens audits sont relus sans perte :
+// note + created + status du point → une remarque ; statut du point d'une visite récente → statut de la 1re remarque.
 function getRemarks(data) {
-  if (data && Array.isArray(data.remarks)) return data.remarks;
-  if (data && data.note) return [{ text: data.note, created: data.created || null }];
+  if (!data) return [];
+  if (Array.isArray(data.remarks)) {
+    const l = data.remarks.map((r, i) => ({ text: r.text || '', created: r.created || null,
+      status: r.status !== undefined ? r.status : (i === 0 ? (data.status || null) : null), urgent: !!r.urgent }));
+    if (!l.length && data.status) l.push({ text: '', created: null, status: data.status, urgent: false });
+    return l;
+  }
+  if (data.note || data.status) return [{ text: data.note || '', created: data.created || null, status: data.status || null, urgent: false }];
   return [];
 }
+// Statut global d'un point = le plus défavorable de ses remarques (pour les compteurs et l'avancement)
+const STATUS_PRIO = ['NC', 'AM', 'NV', 'C', 'NN'];
+function pointStatus(data) {
+  const st = getRemarks(data).map(r => r.status).filter(Boolean);
+  return STATUS_PRIO.find(x => st.includes(x)) || null;
+}
+// Remarques à exporter : celles qui ont un texte ou un statut
+function exportRemarks(data) { return getRemarks(data).filter(r => (r.text || '').trim() || r.status); }
 function ensureRemarks(key) {
   const a = audits[currentAudit];
   if (!a.items[key]) a.items[key] = {};
   const it = a.items[key];
-  if (!Array.isArray(it.remarks)) {
-    it.remarks = getRemarks(it).map(r => ({ text: r.text, created: r.created }));
-    delete it.note; delete it.created;
+  if (!Array.isArray(it.remarks) || 'status' in it || it.remarks.some(r => r.status === undefined)) {
+    it.remarks = getRemarks(it);
+    delete it.note; delete it.created; delete it.status;
   }
   return it.remarks;
 }
+function padRemarks(list, idx) { while (list.length <= idx) list.push({ text: '', created: null, status: null, urgent: false }); }
 async function setRemarkText(key, idx, val) {
-  const list = ensureRemarks(key);
-  while (list.length <= idx) list.push({ text: '', created: null });
+  const list = ensureRemarks(key); padRemarks(list, idx);
   list[idx].text = val;
   await saveAudits();
 }
 async function setRemarkDate(key, idx, val) {
   const a = audits[currentAudit];
-  const list = ensureRemarks(key);
-  while (list.length <= idx) list.push({ text: '', created: null });
+  const list = ensureRemarks(key); padRemarks(list, idx);
   // date vide ou égale à celle de l'audit = valeur par défaut (rien n'est mémorisé)
   list[idx].created = (!val || val === a.date) ? null : val;
   await saveAudits();
 }
+async function setStatus(key, idx, val) {
+  const list = ensureRemarks(key); padRemarks(list, idx);
+  list[idx].status = list[idx].status === val ? null : val;
+  await saveAudits();
+  renderItems();
+  renderCats();
+}
+async function toggleUrgent(key, idx) {
+  const list = ensureRemarks(key); padRemarks(list, idx);
+  list[idx].urgent = !list[idx].urgent;
+  await saveAudits();
+  renderItems();
+}
 async function addRemark(key) {
   const list = ensureRemarks(key);
-  if (!list.length) list.push({ text: '', created: null });
-  list.push({ text: '', created: null });
+  padRemarks(list, 0);
+  list.push({ text: '', created: null, status: null, urgent: false });
   await saveAudits();
   renderItems();
   const t = document.getElementById('rm-' + key + '-' + (list.length - 1));
@@ -810,10 +842,11 @@ async function addRemark(key) {
 async function deleteRemark(key, idx) {
   const list = ensureRemarks(key);
   if (idx >= list.length) return;
-  if ((list[idx].text || '').trim() && !confirm('Supprimer cette remarque ?')) return;
+  if (((list[idx].text || '').trim()) && !confirm('Supprimer cette remarque ?')) return;
   list.splice(idx, 1);
   await saveAudits();
   renderItems();
+  renderCats();
 }
 async function toggleEntreprise(key, val) {
   const a = audits[currentAudit];
@@ -868,6 +901,32 @@ async function removePhoto(key, idx) {
 }
 
 // ── Summary ──────────────────────────────────────────────
+// Liste des remarques urgentes, au format « Catégorie : Remarque. (remarque créée le AAAA-MM-JJ). »
+function urgentList(a) {
+  const out = [];
+  CATS.forEach(cat => cat.items.forEach(item => {
+    const data = (a.items || {})[cat.id + '_' + item.id];
+    getRemarks(data).forEach(r => {
+      const txt = (r.text || '').replace(/\s*\n+\s*/g, ' ').trim().replace(/[.\s]+$/, '');
+      if (r.urgent && txt) out.push(`${cat.label} : ${txt}. (remarque créée le ${r.created || a.date}).`);
+    });
+  }));
+  return out;
+}
+async function copyUrgent() {
+  const el = document.getElementById('urgent-list');
+  if (!el) return;
+  const items = [...el.querySelectorAll('li')].map(li => li.textContent);
+  const text = items.map(t => '• ' + t).join('\n');
+  const html = '<ul>' + items.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>';
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]);
+    toast('Liste copiée');
+  } catch (e) {
+    try { await navigator.clipboard.writeText(text); toast('Liste copiée'); }
+    catch (e2) { const r = document.createRange(); r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Sélection faite : copier avec le menu'); }
+  }
+}
 function renderSummary() {
   const a   = audits[currentAudit];
   const st  = getStats(a);
@@ -886,22 +945,33 @@ function renderSummary() {
     </div>
   </div>`;
 
+  // Synthèse des remarques urgentes, à copier dans un mail : « [Catégorie] : [Remarque]. (remarque créée le [date]). »
+  const urgents = urgentList(a);
+  html += `<div class="card" style="border:2px solid #D00000;background:#fff8f8">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-weight:700;font-size:14px;color:#D00000">⚠ Observations à prendre en compte urgemment (${urgents.length})</span>
+      ${urgents.length ? '<button class="btn" style="margin-left:auto;padding:5px 12px;font-size:12px" onclick="copyUrgent()">Copier</button>' : ''}
+    </div>
+    ${urgents.length
+      ? `<ul id="urgent-list" style="margin:0;padding-left:20px;font-size:13px;line-height:1.5;user-select:text">${urgents.map(t => `<li style="margin-bottom:4px">${esc(t)}</li>`).join('')}</ul>`
+      : '<div style="font-size:13px;color:var(--muted)">Aucune remarque urgente. Utiliser « Marquer urgent » sur une remarque pour l\'ajouter ici.</div>'}
+  </div>`;
+
   html += CATS.map(cat => {
     const cst  = getCatStats(a, cat.id);
     const rows = cat.items.map((item, i) => {
       const key  = cat.id + '_' + cat.items[i].id;
       const data = (a.items  || {})[key] || {};
       const phot = (a.photos || {})[key] || [];
-      const rems = getRemarks(data).filter(r => (r.text || '').trim());
-      if (!data.status && !rems.length && !phot.length) return '';
+      const rems = exportRemarks(data);
+      if (!rems.length && !phot.length) return '';
       const entr = (data.entreprises || []).map(n => `<span style="font-size:11px;font-weight:700;color:var(--teal)">${esc(n)}</span>`).join(' · ');
       return `<div style="padding:10px 0;border-bottom:0.5px solid #f0f0f0">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
           <div style="font-size:13px;font-weight:700;flex:1">${esc(item.t)}</div>
-          ${data.status ? `<span class="badge ${sl[data.status]}">${ll[data.status]}</span>` : ''}
         </div>
         ${entr ? `<div style="margin-top:3px">${entr}</div>` : ''}
-        ${rems.map(r => `<div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(r.text)}${r.created && r.created !== a.date ? ` <span style="color:#212121;font-weight:700">(${esc(r.created)})</span>` : ''}</div>`).join('')}
+        ${rems.map(r => `<div style="display:flex;gap:8px;align-items:start;margin-top:5px"><div style="flex:0 0 auto;min-width:92px">${r.status ? `<span class="badge ${sl[r.status]}">${ll[r.status]}</span>` : ''}</div><div style="font-size:12px;flex:1;color:${r.urgent ? '#D00000' : 'var(--muted)'};${r.urgent ? 'font-weight:700' : ''}">${r.urgent ? '⚠ ' : ''}${esc(r.text)}${r.created && r.created !== a.date ? ` <span style="color:#212121;font-weight:700">(${esc(r.created)})</span>` : ''}</div></div>`).join('')}
         ${phot.length ? `<div style="font-size:11px;color:var(--teal);margin-top:4px;font-weight:700">${phot.length} photo(s)</div>` : ''}
       </div>`;
     }).filter(Boolean).join('');
@@ -984,12 +1054,15 @@ async function exportWord() {
 
   // Couleurs : bleu = observation du présent CR, noir = observation d'un CR précédent
   const BLUE = (CONFIG.COULEUR_NOUVEAU || '#0070C0').replace('#', ''), BLACK = (CONFIG.COULEUR_ANCIEN || '#000000').replace('#', '');
+  const RED  = (CONFIG.COULEUR_URGENT || '#D00000').replace('#', '');
   const children = [
     new Paragraph({ spacing: { before: 0, after: 120 }, children: [
       new TextRun({ text: 'Noir :', bold: true, size: 18, color: BLACK }),
       new TextRun({ text: ' Observations intégrées dans CR précédents.', size: 18, color: BLACK }),
       new TextRun({ text: ' Bleu :', bold: true, size: 18, color: BLUE }),
       new TextRun({ text: ' Observations intégrées dans le présent CR.', size: 18, color: BLUE }),
+      new TextRun({ text: ' Rouge :', bold: true, size: 18, color: RED }),
+      new TextRun({ text: ' Observations à prendre en compte urgemment.', size: 18, color: RED }),
     ] }),
   ];
   const entreprisesList = loadEntreprises();
@@ -1000,8 +1073,7 @@ async function exportWord() {
       const key  = cat.id + '_' + cat.items[i].id;
       const data = (a.items  || {})[key] || {};
       const pf   = (a.photos || {})[key] || [];
-      const rems = getRemarks(data).filter(r => (r.text || '').trim());
-      if (!data.status && !rems.length && !pf.length) continue;
+      if (!exportRemarks(data).length && !pf.length) continue;
       catItems.push({ i, key, data, photoFiles: pf });
     }
     if (!catItems.length) continue;
@@ -1027,7 +1099,7 @@ async function exportWord() {
           const isLandscape = compressed.w >= compressed.h;
           let dispW, dispH;
           if (isLandscape) {
-            const r = Math.min(1, 320 / compressed.w);
+            const r = Math.min(1, 270 / compressed.w);
             dispW = Math.round(compressed.w * r); dispH = Math.round(compressed.h * r);
           } else {
             const r = Math.min(1, 240 / compressed.h);
@@ -1044,10 +1116,11 @@ async function exportWord() {
       if (!rightContent.length) rightContent.push(new Paragraph({ text: '' }));
       prepared.push({ i, key, data, rightContent, photosCm });
     }
-    // Largeurs en twips (1 px d'image = 15 twips) : Remarques | Créé le | Photos
-    const DATE_W  = 1300;
-    const PHOTO_W = Math.max(1300, maxPhotoPx * 15 + 240);
-    const LEFT_W  = 9638 - DATE_W - PHOTO_W;
+    // Largeurs en twips (1 px d'image = 15 twips) : Remarques | Statut | Créé le | Photos
+    // Colonne Photos : au minimum la largeur d'une photo portrait (180 px), même sans photo, pour homogénéiser les pages
+    const STAT_W  = 1400, DATE_W = 1200;
+    const PHOTO_W = Math.max(180 * 15 + 240, maxPhotoPx * 15 + 240);
+    const REM_W   = 9638 - STAT_W - DATE_W - PHOTO_W;
     const DXA = WidthType.DXA;
     const hcell = (text, w) => new TableCell({
       width: { size: w, type: DXA }, shading: { type: ShadingType.SOLID, color: ACC }, borders: NOOP,
@@ -1057,7 +1130,7 @@ async function exportWord() {
 
     const tableRows = [new TableRow({
       tableHeader: true,
-      children: [hcell('Point examiné · Statut · Remarques', LEFT_W), hcell('Créé le', DATE_W), hcell('Photos', PHOTO_W)],
+      children: [hcell('Point examiné · Remarques', REM_W), hcell('Statut', STAT_W), hcell('Créé le', DATE_W), hcell('Photos', PHOTO_W)],
     })];
 
     for (const { i, key, data, rightContent, photosCm } of prepared) {
@@ -1066,56 +1139,61 @@ async function exportWord() {
         const found = entreprisesList.find(e => e.name === name);
         return { name, color: found ? found.color.replace('#','') : ACC };
       });
-      const rems = getRemarks(data).filter(r => (r.text || '').trim());
+      const rems = exportRemarks(data);
 
-      // Ligne 1 (pleine largeur) : titre, statut, entreprises
+      // Ligne 1 (pleine largeur, fond gris clair) : titre du point, entreprises
       const KN = { keepNext: true };
       const titleBlock = [
-        new Paragraph({ ...KN, spacing: { after: 60 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
-        makeBadge(data.status),
-        ...((CONFIG.PENALITES_ACTIVES && data.status === 'NC' && data.pen && CONFIG.PENALITES[item.pen]?.[data.pen]) ? [new Paragraph({ ...KN, spacing: { before: 80 }, children: [new TextRun({ text: CONFIG.PENALITES[item.pen][data.pen], bold: true, size: 18, color: 'B71C1C' })] })] : []),
+        new Paragraph({ ...KN, spacing: { after: entreprises.length ? 40 : 0 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
+        ...((CONFIG.PENALITES_ACTIVES && pointStatus(data) === 'NC' && data.pen && CONFIG.PENALITES[item.pen]?.[data.pen]) ? [new Paragraph({ ...KN, spacing: { before: 80 }, children: [new TextRun({ text: CONFIG.PENALITES[item.pen][data.pen], bold: true, size: 18, color: 'B71C1C' })] })] : []),
         ...entreprises.map(e => new Paragraph({ ...KN,
-          spacing: { before: 60, after: 0 },
+          spacing: { before: 40, after: 0 },
           children: [new TextRun({ text: '▌ ' + e.name, bold: true, size: 18, color: e.color })]
         })),
       ];
       tableRows.push(new TableRow({ cantSplit: true, children: [
-        new TableCell({ width: { size: LEFT_W + DATE_W + PHOTO_W, type: DXA }, columnSpan: 3, borders: CELL,
-          margins: { top: 100, bottom: 100, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP, children: titleBlock }),
+        new TableCell({ width: { size: 9638, type: DXA }, columnSpan: 4, borders: CELL,
+          shading: { type: ShadingType.SOLID, color: 'E8EAEB' },
+          margins: { top: 90, bottom: 90, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP, children: titleBlock }),
       ]}));
 
-      // Ligne 2 : une ligne par remarque (date en face) à gauche, photos du point à droite
+      // Ligne 2 : une ligne par remarque (texte | statut | date) à gauche, photos du point à droite
       if (!rems.length && !photosCm) continue;
       let leftCm = 0;
       const nestedRows = rems.map((r, ri) => {
-        // Date vide ou égale à celle de l'audit = présent CR (bleu) ; autre date = CR précédent (noir, remarque et date)
+        // Rouge = urgent ; sinon date vide ou égale à celle de l'audit = présent CR (bleu), autre date = CR précédent (noir)
         const isNew = !r.created || r.created === a.date;
-        const col   = isNew ? BLUE : BLACK;
+        const col   = r.urgent ? RED : (isNew ? BLUE : BLACK);
         const lines = String(r.text).split(/\r?\n/);
-        leftCm += lines.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 60)) * 0.5, 0) + 0.4;
+        leftCm += lines.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 50)) * 0.5, 0) + 0.4;
+        const top = ri ? SOFT : NO_B;
         return new TableRow({ cantSplit: true, children: [
-          new TableCell({ width: { size: LEFT_W, type: DXA }, borders: { top: ri ? SOFT : NO_B, bottom: NO_B, left: NO_B, right: NO_B },
+          new TableCell({ width: { size: REM_W, type: DXA }, borders: { top, bottom: NO_B, left: NO_B, right: NO_B },
             margins: { top: 80, bottom: 80, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP,
             children: [new Paragraph({ children: lines.map((l, li) => new TextRun({ text: l, size: 20, color: col, break: li ? 1 : 0 })) })] }),
-          new TableCell({ width: { size: DATE_W, type: DXA }, borders: { top: ri ? SOFT : NO_B, bottom: NO_B, left: SOFT, right: NO_B },
+          new TableCell({ width: { size: STAT_W, type: DXA }, borders: { top, bottom: NO_B, left: SOFT, right: NO_B },
+            ...(r.status ? { shading: { type: ShadingType.SOLID, color: badgeBg[r.status] } } : {}),
+            margins: { top: 80, bottom: 80, left: 60, right: 60 }, verticalAlign: VerticalAlign.TOP,
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: r.status ? [new TextRun({ text: ll[r.status], bold: true, size: 16, color: badgeFg[r.status] })] : [] })] }),
+          new TableCell({ width: { size: DATE_W, type: DXA }, borders: { top, bottom: NO_B, left: SOFT, right: NO_B },
             margins: { top: 80, bottom: 80, left: 100, right: 60 }, verticalAlign: VerticalAlign.TOP,
             children: [new Paragraph({ children: [new TextRun({ text: r.created || a.date, size: 18, color: col })] })] }),
         ] });
       });
       const leftChildren = nestedRows.length
-        ? [new Table({ width: { size: LEFT_W + DATE_W, type: DXA }, columnWidths: [LEFT_W, DATE_W],
+        ? [new Table({ width: { size: REM_W + STAT_W + DATE_W, type: DXA }, columnWidths: [REM_W, STAT_W, DATE_W],
             layout: TableLayoutType.FIXED, borders: NOOP, rows: nestedRows }),
            new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [new TextRun({ text: '', size: 2 })] })]
         : [new Paragraph({ text: '' })];
 
       tableRows.push(new TableRow({ cantSplit: photosCm <= 9.5 && leftCm <= 9.5, children: [
-        new TableCell({ width: { size: LEFT_W + DATE_W, type: DXA }, columnSpan: 2, borders: CELL,
+        new TableCell({ width: { size: REM_W + STAT_W + DATE_W, type: DXA }, columnSpan: 3, borders: CELL,
           margins: { top: 0, bottom: 0, left: 0, right: 0 }, verticalAlign: VerticalAlign.TOP, children: leftChildren }),
         new TableCell({ width: { size: PHOTO_W, type: DXA }, borders: CELL,
           margins: { top: 100, bottom: 100, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: rightContent }),
       ]}));
     }
-    children.push(new Table({ width: { size: 9638, type: DXA }, columnWidths: [LEFT_W, DATE_W, PHOTO_W], layout: TableLayoutType.FIXED, borders: CELL, rows: tableRows }));
+    children.push(new Table({ width: { size: 9638, type: DXA }, columnWidths: [REM_W, STAT_W, DATE_W, PHOTO_W], layout: TableLayoutType.FIXED, borders: CELL, rows: tableRows }));
   }
 
   // Cartouche AREP (page de garde), en-tête avec logo, pied de page
@@ -1214,8 +1292,8 @@ async function exportReport() {
       const key  = cat.id + '_' + cat.items[i].id;
       const data = (a.items  || {})[key] || {};
       const pf   = (a.photos || {})[key] || [];
-      const rems = getRemarks(data).filter(r => (r.text || '').trim());
-      if (!data.status && !rems.length && !pf.length) continue;
+      const rems = exportRemarks(data);
+      if (!rems.length && !pf.length) continue;
       hasContent = true;
 
       let photoHtml = '';
@@ -1235,15 +1313,12 @@ async function exportReport() {
             return `<span style="display:inline-block;background:${color};color:#fff;border-radius:4px;padding:2px 9px;font-size:11px;font-weight:700;margin:2px">${esc(name)}</span>`;
           }).join('')}</div>` : '';
 
-      const stat = data.status
-        ? `<div style="display:inline-block;background:${bg[data.status]};color:${cl[data.status]};padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;margin-bottom:6px">${ll[data.status]}</div><br>` : '';
-
       rows += `<tr>
         <td style="padding:12px 14px;border:1px solid #dde3e5;vertical-align:top;width:35%">
           <div style="font-weight:700;font-size:13px;color:#1a2a2e">${esc(cat.items[i].t)}</div>
           ${cat.items[i].sub ? `<div style="font-size:11px;color:#6b8a90;margin-top:3px;line-height:1.4">${esc(cat.items[i].sub)}</div>` : ''}
-          ${stat}${entrHtml}
-          ${rems.map(r => { const nw = !r.created || r.created === a.date; return `<div style="font-size:13px;line-height:1.5;margin-top:6px;color:${nw ? '#0070C0' : '#000'}">${esc(r.text).replace(/\n/g, '<br>')} <span style="font-size:11px;font-weight:700">(${esc(r.created || a.date)})</span></div>`; }).join('')}
+          ${entrHtml}
+          ${rems.map(r => { const nw = !r.created || r.created === a.date; const c = r.urgent ? '#D00000' : (nw ? '#0070C0' : '#000'); return `<div style="font-size:13px;line-height:1.5;margin-top:8px;color:${c}">${r.status ? `<span style="display:inline-block;background:${bg[r.status]};color:${cl[r.status]};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin-right:6px">${ll[r.status]}</span>` : ''}${esc(r.text).replace(/\n/g, '<br>')} <span style="font-size:11px;font-weight:700">(${esc(r.created || a.date)})</span></div>`; }).join('')}
         </td>
         <td style="padding:12px 14px;border:1px solid #dde3e5;vertical-align:top">${photoHtml}</td>
       </tr>`;
