@@ -655,39 +655,62 @@ function renderItems() {
       block.appendChild(entrRow);
     }
 
-    // Remarques
+    // Remarques : plusieurs par point, chacune avec sa date « Créé le ».
+    // Date par défaut = date de l'audit (export en bleu) ; une autre date = observation d'un CR précédent,
+    // non corrigée (remarque et date exportées en noir). Le statut, la pénalité et l'entreprise restent uniques par point.
     const remarquesLabel = document.createElement('label');
     remarquesLabel.textContent = 'Remarques';
     block.appendChild(remarquesLabel);
-    const textarea = document.createElement('textarea');
-    textarea.placeholder = 'Observations, constats...';
-    textarea.rows = 2;
-    textarea.value = data.note || '';
-    textarea.oninput = () => setNote(key, textarea.value);
-    block.appendChild(textarea);
+    let rlist = getRemarks(data);
+    if (!rlist.length) rlist = [{ text: '', created: null }];
+    rlist.forEach((rm, ri) => {
+      const rbox = document.createElement('div');
+      rbox.style.cssText = 'border-left:3px solid #0070C0;padding-left:8px;margin-bottom:10px';
+      const textarea = document.createElement('textarea');
+      textarea.id = 'rm-' + key + '-' + ri;
+      textarea.placeholder = 'Observations, constats...';
+      textarea.rows = 2;
+      textarea.value = rm.text || '';
+      textarea.oninput = () => setRemarkText(key, ri, textarea.value);
+      rbox.appendChild(textarea);
 
-    // Date de l'observation : par défaut la date de l'audit (export en bleu) ;
-    // une autre date = observation d'un CR précédent, non corrigée (remarque et date exportées en noir)
-    const dateRow = document.createElement('div');
-    dateRow.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px';
-    const dateLabel = document.createElement('label');
-    dateLabel.style.cssText = 'margin:0;white-space:nowrap';
-    dateLabel.textContent = 'Créé le';
-    const dateInput = document.createElement('input');
-    dateInput.type = 'date';
-    dateInput.style.cssText = 'width:auto;flex:0 0 auto';
-    dateInput.value = data.created || a.date;
-    const dateHint = document.createElement('span');
-    dateHint.style.cssText = 'font-size:11px;font-weight:700';
-    const showDateHint = () => {
-      const old = dateInput.value && dateInput.value !== a.date;
-      dateHint.textContent = old ? 'CR précédent : exporté en noir' : 'CR actuel : exporté en bleu';
-      dateHint.style.color = old ? '#212121' : '#0070C0';
-    };
-    dateInput.onchange = () => { setCreated(key, dateInput.value); showDateHint(); };
-    showDateHint();
-    dateRow.append(dateLabel, dateInput, dateHint);
-    block.appendChild(dateRow);
+      const dateRow = document.createElement('div');
+      dateRow.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px';
+      const dateLabel = document.createElement('label');
+      dateLabel.style.cssText = 'margin:0;white-space:nowrap';
+      dateLabel.textContent = 'Créé le';
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.style.cssText = 'width:auto;flex:0 0 auto';
+      dateInput.value = rm.created || a.date;
+      const dateHint = document.createElement('span');
+      dateHint.style.cssText = 'font-size:11px;font-weight:700';
+      const showDateHint = () => {
+        const old = dateInput.value && dateInput.value !== a.date;
+        dateHint.textContent = old ? 'CR précédent : exporté en noir' : 'CR actuel : exporté en bleu';
+        dateHint.style.color = old ? '#212121' : '#0070C0';
+        rbox.style.borderLeftColor = old ? '#212121' : '#0070C0';
+      };
+      dateInput.onchange = () => { setRemarkDate(key, ri, dateInput.value); showDateHint(); };
+      showDateHint();
+      dateRow.append(dateLabel, dateInput, dateHint);
+      if (rlist.length > 1 || (rm.text || '').trim()) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.textContent = 'Supprimer';
+        del.style.cssText = 'margin-left:auto;background:#fff;border:1px solid #b71c1c;color:#b71c1c;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif';
+        del.onclick = () => deleteRemark(key, ri);
+        dateRow.appendChild(del);
+      }
+      rbox.appendChild(dateRow);
+      block.appendChild(rbox);
+    });
+    const addRem = document.createElement('button');
+    addRem.type = 'button';
+    addRem.textContent = '+ Ajouter une remarque';
+    addRem.style.cssText = 'background:var(--teal-light);border:1px solid var(--teal-mid);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--teal-dark);font-family:Lato,sans-serif;font-weight:700';
+    addRem.onclick = () => addRemark(key);
+    block.appendChild(addRem);
 
     // Photos
     const photoHeader = document.createElement('div');
@@ -744,18 +767,53 @@ async function setPen(key, val) {
   await saveAudits();
   renderItems();
 }
-async function setCreated(key, val) {
+// Remarques d'un point : liste [{ text, created }] ; created = null → date de l'audit.
+// Les anciens audits (champs note + created) sont relus comme une remarque unique, sans rien perdre.
+function getRemarks(data) {
+  if (data && Array.isArray(data.remarks)) return data.remarks;
+  if (data && data.note) return [{ text: data.note, created: data.created || null }];
+  return [];
+}
+function ensureRemarks(key) {
   const a = audits[currentAudit];
   if (!a.items[key]) a.items[key] = {};
-  // date vide ou égale à celle de l'audit = valeur par défaut (rien n'est mémorisé)
-  a.items[key].created = (!val || val === a.date) ? null : val;
+  const it = a.items[key];
+  if (!Array.isArray(it.remarks)) {
+    it.remarks = getRemarks(it).map(r => ({ text: r.text, created: r.created }));
+    delete it.note; delete it.created;
+  }
+  return it.remarks;
+}
+async function setRemarkText(key, idx, val) {
+  const list = ensureRemarks(key);
+  while (list.length <= idx) list.push({ text: '', created: null });
+  list[idx].text = val;
   await saveAudits();
 }
-async function setNote(key, val) {
+async function setRemarkDate(key, idx, val) {
   const a = audits[currentAudit];
-  if (!a.items[key]) a.items[key] = {};
-  a.items[key].note = val;
+  const list = ensureRemarks(key);
+  while (list.length <= idx) list.push({ text: '', created: null });
+  // date vide ou égale à celle de l'audit = valeur par défaut (rien n'est mémorisé)
+  list[idx].created = (!val || val === a.date) ? null : val;
   await saveAudits();
+}
+async function addRemark(key) {
+  const list = ensureRemarks(key);
+  if (!list.length) list.push({ text: '', created: null });
+  list.push({ text: '', created: null });
+  await saveAudits();
+  renderItems();
+  const t = document.getElementById('rm-' + key + '-' + (list.length - 1));
+  if (t) { t.scrollIntoView({ block: 'center' }); t.focus(); }
+}
+async function deleteRemark(key, idx) {
+  const list = ensureRemarks(key);
+  if (idx >= list.length) return;
+  if ((list[idx].text || '').trim() && !confirm('Supprimer cette remarque ?')) return;
+  list.splice(idx, 1);
+  await saveAudits();
+  renderItems();
 }
 async function toggleEntreprise(key, val) {
   const a = audits[currentAudit];
@@ -834,7 +892,8 @@ function renderSummary() {
       const key  = cat.id + '_' + cat.items[i].id;
       const data = (a.items  || {})[key] || {};
       const phot = (a.photos || {})[key] || [];
-      if (!data.status && !data.note && !phot.length) return '';
+      const rems = getRemarks(data).filter(r => (r.text || '').trim());
+      if (!data.status && !rems.length && !phot.length) return '';
       const entr = (data.entreprises || []).map(n => `<span style="font-size:11px;font-weight:700;color:var(--teal)">${esc(n)}</span>`).join(' · ');
       return `<div style="padding:10px 0;border-bottom:0.5px solid #f0f0f0">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
@@ -842,7 +901,7 @@ function renderSummary() {
           ${data.status ? `<span class="badge ${sl[data.status]}">${ll[data.status]}</span>` : ''}
         </div>
         ${entr ? `<div style="margin-top:3px">${entr}</div>` : ''}
-        ${data.note ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(data.note)}</div>` : ''}
+        ${rems.map(r => `<div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(r.text)}${r.created && r.created !== a.date ? ` <span style="color:#212121;font-weight:700">(${esc(r.created)})</span>` : ''}</div>`).join('')}
         ${phot.length ? `<div style="font-size:11px;color:var(--teal);margin-top:4px;font-weight:700">${phot.length} photo(s)</div>` : ''}
       </div>`;
     }).filter(Boolean).join('');
@@ -877,7 +936,7 @@ async function exportWord() {
 
   const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
           ImageRun, AlignmentType, WidthType, BorderStyle, ShadingType, VerticalAlign,
-          Header, Footer, PageNumber, TabStopType, Tab, TableLayoutType } = window.docx;
+          Header, Footer, PageNumber, TabStopType, Tab, TableLayoutType, LineRuleType } = window.docx;
   const F_T = CONFIG.FONT_TITLE, F_B = CONFIG.FONT_BODY, ACC = CONFIG.ACCENT.replace('#', '');
 
   async function compressPhoto(arrayBuffer) {
@@ -940,7 +999,8 @@ async function exportWord() {
       const key  = cat.id + '_' + cat.items[i].id;
       const data = (a.items  || {})[key] || {};
       const pf   = (a.photos || {})[key] || [];
-      if (!data.status && !data.note && !pf.length) continue;
+      const rems = getRemarks(data).filter(r => (r.text || '').trim());
+      if (!data.status && !rems.length && !pf.length) continue;
       catItems.push({ i, key, data, photoFiles: pf });
     }
     if (!catItems.length) continue;
@@ -956,6 +1016,7 @@ async function exportWord() {
     let maxPhotoPx = 0;
     for (const { i, key, data, photoFiles } of catItems) {
       const rightContent = [];
+      let photosCm = 0;   // hauteur estimée des photos de la ligne (cm)
       for (const fn of photoFiles) {
         try {
           const fh  = await dirHandle.getFileHandle(fn);
@@ -972,6 +1033,7 @@ async function exportWord() {
             dispW = Math.round(compressed.w * r); dispH = Math.round(compressed.h * r);
           }
           maxPhotoPx = Math.max(maxPhotoPx, dispW);
+          photosCm += dispH * 0.02646 + 0.25;
           rightContent.push(new Paragraph({
             spacing: { before: 60, after: 80 },
             children: [new ImageRun({ data: compressed.buf, transformation: { width: dispW, height: dispH }, type: 'jpg' })],
@@ -979,7 +1041,7 @@ async function exportWord() {
         } catch(e) { /* photo inaccessible */ }
       }
       if (!rightContent.length) rightContent.push(new Paragraph({ text: '' }));
-      prepared.push({ i, key, data, rightContent });
+      prepared.push({ i, key, data, rightContent, photosCm });
     }
     // Largeurs en twips (1 px d'image = 15 twips) : Remarques | Créé le | Photos
     const DATE_W  = 1300;
@@ -997,18 +1059,16 @@ async function exportWord() {
       children: [hcell('Point examiné · Statut · Remarques', LEFT_W), hcell('Créé le', DATE_W), hcell('Photos', PHOTO_W)],
     })];
 
-    for (const { i, key, data, rightContent } of prepared) {
+    for (const { i, key, data, rightContent, photosCm } of prepared) {
       const item = cat.items[i];
       const entreprises = (data.entreprises || []).map(name => {
         const found = entreprisesList.find(e => e.name === name);
         return { name, color: found ? found.color.replace('#','') : ACC };
       });
-      // Date par défaut = date de l'audit (bleu) ; autre date = CR précédent (noir, remarque et date)
-      const isNew   = !data.created || data.created === a.date;
-      const noteCol = isNew ? BLUE : BLACK;
-      const dateTxt = data.created || a.date;
+      const rems = getRemarks(data).filter(r => (r.text || '').trim());
 
-      const leftContent = [
+      // Bloc « point examiné » : titre, statut, pénalité, entreprises
+      const titleBlock = [
         new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: item.t, bold: true, size: 20 })] }),
         makeBadge(data.status),
         ...((data.status === 'NC' && data.pen && CONFIG.PENALITES[item.pen]?.[data.pen]) ? [new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: CONFIG.PENALITES[item.pen][data.pen], bold: true, size: 18, color: 'B71C1C' })] })] : []),
@@ -1016,15 +1076,36 @@ async function exportWord() {
           spacing: { before: 60, after: 0 },
           children: [new TextRun({ text: '▌ ' + e.name, bold: true, size: 18, color: e.color })]
         })),
-        ...(data.note ? [new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: data.note, size: 20, color: noteCol })] })] : []),
       ];
 
-      tableRows.push(new TableRow({ cantSplit: true, children: [
-        new TableCell({ width: { size: LEFT_W, type: DXA }, borders: CELL,
-          margins: { top: 100, bottom: 100, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP, children: leftContent }),
-        new TableCell({ width: { size: DATE_W, type: DXA }, borders: CELL,
-          margins: { top: 100, bottom: 100, left: 100, right: 60 }, verticalAlign: VerticalAlign.TOP,
-          children: [new Paragraph({ children: [new TextRun({ text: dateTxt, size: 18, color: noteCol })] })] }),
+      // Tableau imbriqué : une ligne par remarque, la date « Créé le » en face de sa remarque
+      const NB = { top: NO_B, bottom: NO_B, left: NO_B, right: NO_B };
+      const nestedRows = [new TableRow({ cantSplit: true, children: [new TableCell({
+        width: { size: LEFT_W + DATE_W, type: DXA }, columnSpan: 2, borders: NB,
+        margins: { top: 100, bottom: 100, left: 140, right: 140 }, children: titleBlock })] })];
+      let leftCm = 1.6 + entreprises.length * 0.5 + (data.status ? 0.8 : 0);
+      for (const r of rems) {
+        // Date vide ou égale à celle de l'audit = présent CR (bleu) ; autre date = CR précédent (noir, remarque et date)
+        const isNew = !r.created || r.created === a.date;
+        const col   = isNew ? BLUE : BLACK;
+        const lines = String(r.text).split(/\r?\n/);
+        leftCm += lines.reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 60)) * 0.5, 0) + 0.4;
+        nestedRows.push(new TableRow({ cantSplit: true, children: [
+          new TableCell({ width: { size: LEFT_W, type: DXA }, borders: { top: THIN, bottom: NO_B, left: NO_B, right: NO_B },
+            margins: { top: 80, bottom: 80, left: 140, right: 140 }, verticalAlign: VerticalAlign.TOP,
+            children: [new Paragraph({ children: lines.map((l, li) => new TextRun({ text: l, size: 20, color: col, break: li ? 1 : 0 })) })] }),
+          new TableCell({ width: { size: DATE_W, type: DXA }, borders: { top: THIN, bottom: NO_B, left: THIN, right: NO_B },
+            margins: { top: 80, bottom: 80, left: 100, right: 60 }, verticalAlign: VerticalAlign.TOP,
+            children: [new Paragraph({ children: [new TextRun({ text: r.created || a.date, size: 18, color: col })] })] }),
+        ] }));
+      }
+      const nested = new Table({ width: { size: LEFT_W + DATE_W, type: DXA }, columnWidths: [LEFT_W, DATE_W],
+        layout: TableLayoutType.FIXED, borders: NB, rows: nestedRows });
+
+      tableRows.push(new TableRow({ cantSplit: photosCm <= 9.5 && leftCm <= 9.5, children: [
+        new TableCell({ width: { size: LEFT_W + DATE_W, type: DXA }, columnSpan: 2, borders: CELL,
+          margins: { top: 0, bottom: 0, left: 0, right: 0 }, verticalAlign: VerticalAlign.TOP,
+          children: [nested, new Paragraph({ spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT }, children: [new TextRun({ text: '', size: 2 })] })] }),
         new TableCell({ width: { size: PHOTO_W, type: DXA }, borders: CELL,
           margins: { top: 100, bottom: 100, left: 100, right: 100 }, verticalAlign: VerticalAlign.TOP, children: rightContent }),
       ]}));
@@ -1128,7 +1209,8 @@ async function exportReport() {
       const key  = cat.id + '_' + cat.items[i].id;
       const data = (a.items  || {})[key] || {};
       const pf   = (a.photos || {})[key] || [];
-      if (!data.status && !data.note && !pf.length) continue;
+      const rems = getRemarks(data).filter(r => (r.text || '').trim());
+      if (!data.status && !rems.length && !pf.length) continue;
       hasContent = true;
 
       let photoHtml = '';
@@ -1156,7 +1238,7 @@ async function exportReport() {
           <div style="font-weight:700;font-size:13px;color:#1a2a2e">${esc(cat.items[i].t)}</div>
           ${cat.items[i].sub ? `<div style="font-size:11px;color:#6b8a90;margin-top:3px;line-height:1.4">${esc(cat.items[i].sub)}</div>` : ''}
           ${stat}${entrHtml}
-          ${data.note ? `<div style="font-size:13px;color:#333;line-height:1.5;margin-top:4px">${esc(data.note)}</div>` : ''}
+          ${rems.map(r => { const nw = !r.created || r.created === a.date; return `<div style="font-size:13px;line-height:1.5;margin-top:6px;color:${nw ? '#0070C0' : '#000'}">${esc(r.text).replace(/\n/g, '<br>')} <span style="font-size:11px;font-weight:700">(${esc(r.created || a.date)})</span></div>`; }).join('')}
         </td>
         <td style="padding:12px 14px;border:1px solid #dde3e5;vertical-align:top">${photoHtml}</td>
       </tr>`;
